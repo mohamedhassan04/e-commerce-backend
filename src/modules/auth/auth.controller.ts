@@ -10,13 +10,7 @@ import {
 } from '@nestjs/common';
 import { AuthenticationService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
-import {
-  ApiBody,
-  ApiCookieAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response as Res } from 'express';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginUserDto } from '../users/dto/login-user.dto';
@@ -97,17 +91,13 @@ export class AuthenticationController {
     status: HttpStatus.BAD_REQUEST,
     description: 'Current User Failed.',
   })
-  @ApiCookieAuth('access_token')
   @UseGuards(JwtAuthGuard)
   @Get('current')
   async current(@Request() req: any) {
-    const refresh_token = req.cookies['refresh_token'];
-    const user = req?.user;
     return {
       status: HttpStatus.OK,
       success: {
-        refresh_token,
-        user,
+        user: req.user,
       },
     };
   }
@@ -126,7 +116,6 @@ export class AuthenticationController {
   })
   @Post('logout')
   async logout(@Response() res: Res) {
-    res.clearCookie('refresh_token');
     res.status(HttpStatus.OK).json({
       success: true,
       message: 'Se déconnecter avec success',
