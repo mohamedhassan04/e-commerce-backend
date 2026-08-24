@@ -13,7 +13,7 @@ export class Users extends Node {
   @Column({ name: 'email', type: 'varchar', length: 100, unique: true })
   email: string;
 
-  @Column({ name: 'password', type: 'varchar', select: false })
+  @Column({ name: 'password', type: 'varchar' })
   password: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })

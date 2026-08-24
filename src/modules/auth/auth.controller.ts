@@ -16,13 +16,15 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginUserDto } from '../users/dto/login-user.dto';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UsersService } from '../users/users.service';
+import { ConfigService } from '@nestjs/config';
 
-@ApiTags('Auth')
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthenticationController {
   constructor(
     private authService: AuthenticationService,
     private usersService: UsersService,
+    private configService: ConfigService,
   ) {}
 
   //@Method POST
@@ -30,24 +32,37 @@ export class AuthenticationController {
   //@Path: /login
   @ApiOperation({ summary: 'Login user' })
   @ApiResponse({
-    status: HttpStatus.CREATED,
+    status: HttpStatus.OK,
     description: 'User Logged Successfully.',
   })
   @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'User Logged Failed.',
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid credentials.',
   })
   @ApiBody({ type: LoginUserDto })
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Request() req, @Response() res: Res) {
+  async login(
+    @Request() req,
+    @Body() loginUserDto: LoginUserDto,
+    @Response() res: Res,
+  ) {
     try {
-      const { accessToken } = await this.authService.login(req.user);
+      const { accessToken } = await this.authService.login(
+        req.user,
+        loginUserDto,
+      );
 
-      return res.status(200).json({
-        success: {
-          access_token: accessToken,
-        },
+      res.cookie('access_token', accessToken, {
+        httpOnly: true,
+        secure: this.configService.get<string>('NODE_ENV') === 'production',
+        sameSite: 'lax',
+        maxAge: this.configService.get<number>('JWT_EXPIRATION_MS', 3600000),
+      });
+
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        message: 'Login successful',
       });
     } catch (error: any) {
       res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
@@ -80,16 +95,16 @@ export class AuthenticationController {
   }
 
   //@Method GET
-  //@desc Get Current User
+  //@desc Get current authenticated user
   //@Path: /current
   @ApiOperation({ summary: 'Current user' })
   @ApiResponse({
-    status: HttpStatus.CREATED,
+    status: HttpStatus.OK,
     description: 'Current User Successfully.',
   })
   @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Current User Failed.',
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized.',
   })
   @UseGuards(JwtAuthGuard)
   @Get('current')
@@ -103,22 +118,19 @@ export class AuthenticationController {
   }
 
   //@Method POST
-  //@desc Logout from my account
+  //@desc Logout user and clear cookie
   //@Path: /logout
   @ApiOperation({ summary: 'Logout user' })
   @ApiResponse({
-    status: HttpStatus.CREATED,
+    status: HttpStatus.OK,
     description: 'Logout User Successfully.',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Logout User Failed.',
   })
   @Post('logout')
   async logout(@Response() res: Res) {
+    res.clearCookie('access_token');
     res.status(HttpStatus.OK).json({
       success: true,
-      message: 'Se déconnecter avec success',
+      message: 'Logged out successfully',
     });
   }
 }

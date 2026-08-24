@@ -1,5 +1,5 @@
 import { ConflictException, HttpStatus, Injectable } from '@nestjs/common';
-import { Algorithm, hash } from '@node-rs/argon2';
+import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from './entities/user.entity';
@@ -20,12 +20,8 @@ export class UsersService {
         throw new ConflictException('Cette adresse email est deja utilisée.');
       }
 
-      const hashedPassword = await hash(createUserDto.password, {
-        algorithm: Algorithm.Argon2id,
-        memoryCost: 19456,
-        timeCost: 2,
-        parallelism: 1,
-      });
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
 
       const user = this._userRepo.create({
         ...createUserDto,
@@ -45,7 +41,7 @@ export class UsersService {
 
   async findOneUser(email: string) {
     return await this._userRepo.findOne({
-      where: { email: email },
+      where: { email },
     });
   }
 
