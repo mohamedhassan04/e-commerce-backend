@@ -105,6 +105,11 @@ class ConfigService {
     return this.getValue('PREFIX') + '/';
   }
 
+  // Method to get the backend URL
+  get backendUrl(): string {
+    return this.getValue('BACKEND_URL', false) || 'http://localhost:8080';
+  }
+
   // Method to get the Swagger configuration
   get swaggerConfig(): ISwaggerConfigInterface {
     return {

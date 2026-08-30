@@ -11,6 +11,7 @@ import { Product } from './entities/product.entity';
 import { ProductImage } from './entities/product-image.entity';
 import { ProductVariant } from './entities/product-variant.entity';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
+import { configService } from 'src/config/config.service';
 
 @Injectable()
 export class ProductService {
@@ -19,6 +20,21 @@ export class ProductService {
     @InjectRepository(Product)
     private readonly _productRepo: Repository<Product>,
   ) {}
+
+  private formatImageUrl(url: string): string {
+    if (url.startsWith('http')) return url;
+    return `${configService.backendUrl}${url}`;
+  }
+
+  private formatProductImages(products: Product[]) {
+    return products.map((product) => ({
+      ...product,
+      images: product.images?.map((img) => ({
+        ...img,
+        url: this.formatImageUrl(img.url),
+      })),
+    }));
+  }
 
   async createProduct(
     createProductDto: CreateProductDto,
@@ -119,10 +135,12 @@ export class ProductService {
       .orderBy('product.createdAt', 'DESC')
       .getManyAndCount();
 
+    const formattedData = this.formatProductImages(data);
+
     return {
       message: 'Products retrieved successfully.',
       HttpStatus: HttpStatus.OK,
-      data,
+      data: formattedData,
       meta: {
         total,
         page,
