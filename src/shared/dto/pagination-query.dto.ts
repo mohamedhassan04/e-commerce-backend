@@ -18,19 +18,26 @@ export class ProductQueryDto {
   @IsNumberString()
   page?: number;
 
-  @ApiPropertyOptional({ description: 'Search by category name' })
-  @IsOptional()
-  category?: string;
-
-  @ApiPropertyOptional({ description: 'Search by term' })
+  @ApiPropertyOptional({ description: 'Search by product name' })
   @IsOptional()
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Search by status' })
+  @ApiPropertyOptional({ description: 'Filter by active status' })
   @IsOptional()
-  @IsString()
-  status?: string;
+  @Transform(({ value }) => value === 'true')
+  @IsBoolean()
+  isActive?: boolean;
+
+  @ApiPropertyOptional({ description: 'Minimum price' })
+  @IsOptional()
+  @IsNumberString()
+  minPrice?: number;
+
+  @ApiPropertyOptional({ description: 'Maximum price' })
+  @IsOptional()
+  @IsNumberString()
+  maxPrice?: number;
 }
 
 export class InvoiceQueryDto {

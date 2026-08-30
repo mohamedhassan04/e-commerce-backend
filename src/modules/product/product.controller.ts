@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -27,6 +28,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { multerConfig } from 'src/shared/multer/multer.config';
+import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
 
 @ApiTags('Product')
 @Controller('product')
@@ -51,24 +53,24 @@ export class ProductController {
   @Roles('ADMIN')
   @UseInterceptors(FilesInterceptor('images', 10, multerConfig))
   @Post()
-  create(
+  createProduct(
     @Body() createProductDto: CreateProductSwaggerDto,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
-    return this.productService.create(createProductDto, files);
+    return this.productService.createProduct(createProductDto, files);
   }
 
   //@Method GET
   //@desc Get all products
-  //@Path: /product
+  //@Path: /all
   @ApiOperation({ summary: 'Get all products' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Products retrieved successfully.',
   })
-  @Get()
-  findAll() {
-    return this.productService.findAll();
+  @Get('all')
+  findAll(@Query() query: ProductQueryDto) {
+    return this.productService.findAllProducts(query);
   }
 
   //@Method GET
