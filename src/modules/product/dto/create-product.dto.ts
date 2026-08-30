@@ -137,3 +137,12 @@ export class CreateProductDto {
   @Type(() => CreateProductImageDto)
   images?: CreateProductImageDto[];
 }
+
+export class CreateProductSwaggerDto extends CreateProductDto {
+  @ApiProperty({
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    description: 'Product images (files)',
+  })
+  images: any[];
+}

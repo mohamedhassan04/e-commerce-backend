@@ -13,13 +13,14 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
+  ApiBody,
   ApiConsumes,
   ApiNotFoundResponse,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateProductDto } from './dto/create-product.dto';
+import { CreateProductSwaggerDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductService } from './product.service';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -37,6 +38,7 @@ export class ProductController {
   //@Path: /product
   @ApiOperation({ summary: 'Create a new product' })
   @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateProductSwaggerDto })
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'Product created successfully.',
@@ -50,7 +52,7 @@ export class ProductController {
   @UseInterceptors(FilesInterceptor('images', 10, multerConfig))
   @Post()
   create(
-    @Body() createProductDto: CreateProductDto,
+    @Body() createProductDto: CreateProductSwaggerDto,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
     return this.productService.create(createProductDto, files);
