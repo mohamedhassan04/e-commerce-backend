@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -31,6 +31,7 @@ export class CreateProductVariantDto {
   @IsNotEmpty()
   @IsNumber()
   @Min(0)
+  @Type(() => Number)
   price: number;
 
   @ApiPropertyOptional({
@@ -42,6 +43,7 @@ export class CreateProductVariantDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
+  @Type(() => Number)
   stock?: number;
 
   @ApiPropertyOptional({
@@ -84,6 +86,7 @@ export class CreateProductImageDto {
   })
   @IsOptional()
   @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
   isPrimary?: boolean;
 }
 
@@ -115,16 +118,22 @@ export class CreateProductDto {
   })
   @IsOptional()
   @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
   isActive?: boolean;
 
   @ApiPropertyOptional({
     type: [CreateProductVariantDto],
     description: 'Size variants for the product',
   })
+  @Transform(({ value }) => {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    return Array.isArray(parsed)
+      ? parsed.map((v) => plainToInstance(CreateProductVariantDto, v))
+      : parsed;
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreateProductVariantDto)
   variants?: CreateProductVariantDto[];
 
   @ApiPropertyOptional({
