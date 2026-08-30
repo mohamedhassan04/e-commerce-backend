@@ -17,13 +17,12 @@ export class ProductService {
     private readonly _dataSource: DataSource,
     @InjectRepository(Product)
     private readonly _productRepo: Repository<Product>,
-    @InjectRepository(ProductVariant)
-    private readonly _variantRepo: Repository<ProductVariant>,
-    @InjectRepository(ProductImage)
-    private readonly _imageRepo: Repository<ProductImage>,
   ) {}
 
-  async create(createProductDto: CreateProductDto) {
+  async create(
+    createProductDto: CreateProductDto,
+    files: Express.Multer.File[],
+  ) {
     const queryRunner = this._dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -51,12 +50,12 @@ export class ProductService {
         await queryRunner.manager.save(ProductVariant, variants);
       }
 
-      if (createProductDto.images?.length) {
-        const images = createProductDto.images.map((img) =>
+      if (files?.length) {
+        const images = files.map((file, index) =>
           queryRunner.manager.create(ProductImage, {
-            url: img.url,
-            alt: img.alt,
-            isPrimary: img.isPrimary ?? false,
+            url: `/uploads/${file.filename}`,
+            alt: file.originalname,
+            isPrimary: index === 0,
             product: savedProduct,
           }),
         );

@@ -10,6 +10,7 @@ import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { setupSwagger } from './shared/swagger/setup';
 import { configService as config } from './config/config.service';
+import { join } from 'path';
 
 async function bootstrap() {
   await createDatabaseIfNotExists();
@@ -31,6 +32,9 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true, limit: '20mb' }));
 
   app.use(helmet());
+
+  // Serve static files from uploads folder
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads' });
 
   // Enable validation globally
   app.useGlobalPipes(

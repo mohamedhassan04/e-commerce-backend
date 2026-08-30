@@ -7,9 +7,13 @@ import {
   Param,
   Patch,
   Post,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import {
+  ApiConsumes,
   ApiNotFoundResponse,
   ApiOperation,
   ApiResponse,
@@ -21,6 +25,7 @@ import { ProductService } from './product.service';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
+import { multerConfig } from 'src/shared/multer/multer.config';
 
 @ApiTags('Product')
 @Controller('product')
@@ -31,6 +36,7 @@ export class ProductController {
   //@desc Create a new product with variants and images
   //@Path: /product
   @ApiOperation({ summary: 'Create a new product' })
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'Product created successfully.',
@@ -41,9 +47,13 @@ export class ProductController {
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
+  @UseInterceptors(FilesInterceptor('images', 10, multerConfig))
   @Post()
-  create(@Body() createProductDto: CreateProductDto) {
-    return this.productService.create(createProductDto);
+  create(
+    @Body() createProductDto: CreateProductDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    return this.productService.create(createProductDto, files);
   }
 
   //@Method GET
