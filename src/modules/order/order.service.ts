@@ -10,6 +10,8 @@ import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { ProductVariant } from 'src/modules/product/entities/product-variant.entity';
 import { Users } from 'src/modules/users/entities/user.entity';
+import { Address } from 'src/modules/users/entities/address.entity';
+import { PhoneNumber } from 'src/modules/users/entities/phone-number.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
@@ -22,12 +24,48 @@ export class OrderService {
     private readonly _orderRepo: Repository<Order>,
   ) {}
 
+  private cleanNullFields(order: Order) {
+    const cleaned = { ...order };
+    if (!cleaned.address) delete cleaned.address;
+    if (!cleaned.phoneNumber) delete cleaned.phoneNumber;
+    if (!cleaned.manualAddressStreet) delete cleaned.manualAddressStreet;
+    if (!cleaned.manualAddressCity) delete cleaned.manualAddressCity;
+    if (!cleaned.manualAddressState) delete cleaned.manualAddressState;
+    if (!cleaned.manualAddressZipCode) delete cleaned.manualAddressZipCode;
+    if (!cleaned.manualAddressCountry) delete cleaned.manualAddressCountry;
+    if (!cleaned.manualPhoneNumber) delete cleaned.manualPhoneNumber;
+    return cleaned;
+  }
+
+  // @desc Create a new order
+  // @route POST /order
   async createOrder(createOrderDto: CreateOrderDto, user: Users) {
     const queryRunner = this._dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      let address: Address | null = null;
+      let phoneNumber: PhoneNumber | null = null;
+
+      if (createOrderDto.addressId) {
+        address = await queryRunner.manager.findOne(Address, {
+          where: { id: createOrderDto.addressId, user: { id: user.id } },
+        });
+        if (!address) {
+          throw new NotFoundException('Adresse non trouvée.');
+        }
+      }
+
+      if (createOrderDto.phoneNumberId) {
+        phoneNumber = await queryRunner.manager.findOne(PhoneNumber, {
+          where: { id: createOrderDto.phoneNumberId, user: { id: user.id } },
+        });
+        if (!phoneNumber) {
+          throw new NotFoundException('Numéro de téléphone non trouvé.');
+        }
+      }
+
       let total = 0;
       const orderItems: OrderItem[] = [];
 
@@ -68,9 +106,17 @@ export class OrderService {
         total,
         user,
         items: orderItems,
+        address: address,
+        phoneNumber: phoneNumber,
+        manualAddressStreet: createOrderDto.manualAddress?.street,
+        manualAddressCity: createOrderDto.manualAddress?.city,
+        manualAddressState: createOrderDto.manualAddress?.state,
+        manualAddressZipCode: createOrderDto.manualAddress?.zipCode,
+        manualAddressCountry: createOrderDto.manualAddress?.country,
+        manualPhoneNumber: createOrderDto.manualPhoneNumber?.phoneNumber,
       });
 
-      const savedOrder = await queryRunner.manager.save(Order, order);
+      await queryRunner.manager.save(Order, order);
       await queryRunner.commitTransaction();
 
       return {
@@ -85,26 +131,32 @@ export class OrderService {
     }
   }
 
+  // @desc Get user orders with pagination
+  // @route GET /order/my-orders
   async findUserOrders(user: Users, query: ProductQueryDto) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this._orderRepo.findAndCount({
-      where: { user: { id: user.id } },
-      relations: [
-        'items',
-        'items.productVariant',
-        'items.productVariant.product',
-      ],
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
+    const qb = this._orderRepo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.items', 'items')
+      .leftJoin('items.productVariant', 'productVariant')
+      .addSelect(['productVariant.id', 'productVariant.size'])
+      .leftJoin('productVariant.product', 'product')
+      .addSelect(['product.id', 'product.name'])
+      .leftJoinAndSelect('order.address', 'address')
+      .leftJoinAndSelect('order.phoneNumber', 'phoneNumber')
+      .where('order.user.id = :userId', { userId: user.id })
+      .orderBy('order.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
 
     return {
       message: 'Orders retrieved successfully.',
-      data,
+      data: data.map((order) => this.cleanNullFields(order)),
       meta: {
         total,
         page,
@@ -114,26 +166,33 @@ export class OrderService {
     };
   }
 
+  // @desc Get all orders with pagination (admin)
+  // @route GET /order/all
   async findAllOrders(query: ProductQueryDto) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this._orderRepo.findAndCount({
-      relations: [
-        'items',
-        'items.productVariant',
-        'items.productVariant.product',
-        'user',
-      ],
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
+    const qb = this._orderRepo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.items', 'items')
+      .leftJoin('items.productVariant', 'productVariant')
+      .addSelect(['productVariant.id', 'productVariant.size'])
+      .leftJoin('productVariant.product', 'product')
+      .addSelect(['product.id', 'product.name'])
+      .leftJoinAndSelect('order.address', 'address')
+      .leftJoinAndSelect('order.phoneNumber', 'phoneNumber')
+      .leftJoin('order.user', 'user')
+      .addSelect(['user.id', 'user.firstName', 'user.lastName', 'user.email'])
+      .orderBy('order.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
 
     return {
       message: 'Orders retrieved successfully.',
-      data,
+      data: data.map((order) => this.cleanNullFields(order)),
       meta: {
         total,
         page,
@@ -143,16 +202,20 @@ export class OrderService {
     };
   }
 
+  // @desc Get order by ID
+  // @route GET /order/:id
   async findOrderById(orderId: string) {
-    const order = await this._orderRepo.findOne({
-      where: { id: orderId },
-      relations: [
-        'items',
-        'items.productVariant',
-        'items.productVariant.product',
-        'user',
-      ],
-    });
+    const order = await this._orderRepo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.items', 'items')
+      .leftJoinAndSelect('items.productVariant', 'productVariant')
+      .leftJoinAndSelect('productVariant.product', 'product')
+      .leftJoinAndSelect('order.address', 'address')
+      .leftJoinAndSelect('order.phoneNumber', 'phoneNumber')
+      .leftJoin('order.user', 'user')
+      .addSelect(['user.id', 'user.firstName', 'user.lastName', 'user.email'])
+      .where('order.id = :orderId', { orderId })
+      .getOne();
 
     if (!order) {
       throw new NotFoundException(`Order with ID "${orderId}" not found.`);
@@ -160,12 +223,17 @@ export class OrderService {
 
     return {
       message: 'Order retrieved successfully.',
-      data: order,
+      data: this.cleanNullFields(order),
     };
   }
 
+  // @desc Update order status (admin)
+  // @route PATCH /order/:id/status
   async updateOrderStatus(orderId: string, dto: UpdateOrderStatusDto) {
-    const order = await this._orderRepo.findOne({ where: { id: orderId } });
+    const order = await this._orderRepo
+      .createQueryBuilder('order')
+      .where('order.id = :orderId', { orderId })
+      .getOne();
 
     if (!order) {
       throw new NotFoundException(`Order with ID "${orderId}" not found.`);
@@ -180,11 +248,16 @@ export class OrderService {
     };
   }
 
+  // @desc Cancel pending order
+  // @route PATCH /order/:id/cancel
   async cancelOrder(orderId: string, user: Users) {
-    const order = await this._orderRepo.findOne({
-      where: { id: orderId, user: { id: user.id } },
-      relations: ['items', 'items.productVariant'],
-    });
+    const order = await this._orderRepo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.items', 'items')
+      .leftJoinAndSelect('items.productVariant', 'productVariant')
+      .where('order.id = :orderId', { orderId })
+      .andWhere('order.user.id = :userId', { userId: user.id })
+      .getOne();
 
     if (!order) {
       throw new NotFoundException(`Order with ID "${orderId}" not found.`);
