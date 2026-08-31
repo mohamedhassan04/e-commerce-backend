@@ -7,7 +7,6 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { CreateProductDto, RateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
 import { ProductImage } from './entities/product-image.entity';
 import { ProductVariant } from './entities/product-variant.entity';
@@ -173,15 +172,22 @@ export class ProductService {
     };
   }
 
-  findOne(id: string) {
-    return `This action returns a #${id} product`;
-  }
+  async removeProduct(id: string) {
+    // Find the product by ID in the database
+    const product = await this._productRepo.findOne({ where: { id } });
 
-  update(id: string, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
-  }
+    // If product doesn't exist, throw a 404 error
+    if (!product) {
+      throw new NotFoundException(`Product with ID "${id}" not found.`);
+    }
 
-  remove(id: string) {
-    return `This action removes a #${id} product`;
+    // Delete the product from the database
+    // Related variants and images are auto-deleted via ON DELETE CASCADE
+    await this._productRepo.remove(product);
+
+    return {
+      message: 'Product deleted successfully.',
+      HttpStatus: HttpStatus.OK,
+    };
   }
 }

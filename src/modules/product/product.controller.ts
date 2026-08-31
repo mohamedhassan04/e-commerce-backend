@@ -25,7 +25,6 @@ import {
   CreateProductSwaggerDto,
   RateProductDto,
 } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductService } from './product.service';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -91,33 +90,22 @@ export class ProductController {
     return this.productService.rateProduct(id, rateProductDto);
   }
 
-  //@Method GET
-  //@desc Get a product by id
-  //@Path: /product/:id
-  @ApiOperation({ summary: 'Get a product by id' })
-  @ApiNotFoundResponse({ description: 'Product not found' })
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.productService.findOne(id);
-  }
-
-  //@Method PATCH
-  //@desc Update a product
-  //@Path: /product/:id
-  @ApiOperation({ summary: 'Update a product' })
-  @ApiNotFoundResponse({ description: 'Product not found' })
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productService.update(id, updateProductDto);
-  }
-
   //@Method DELETE
   //@desc Delete a product
   //@Path: /product/:id
   @ApiOperation({ summary: 'Delete a product' })
-  @ApiNotFoundResponse({ description: 'Product not found' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Product deleted successfully.',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Product not found.',
+  })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.productService.remove(id);
+    return this.productService.removeProduct(id);
   }
 }
