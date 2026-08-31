@@ -2,16 +2,17 @@ import {
   HttpStatus,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { CreateProductDto } from './dto/create-product.dto';
+import { CreateProductDto, RateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
 import { ProductImage } from './entities/product-image.entity';
 import { ProductVariant } from './entities/product-variant.entity';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
-import { configService } from 'src/config/config.service';
+import { formatProductImages } from 'src/shared/utils/utils';
 
 @Injectable()
 export class ProductService {
@@ -20,21 +21,6 @@ export class ProductService {
     @InjectRepository(Product)
     private readonly _productRepo: Repository<Product>,
   ) {}
-
-  private formatImageUrl(url: string): string {
-    if (url.startsWith('http')) return url;
-    return `${configService.backendUrl}${url}`;
-  }
-
-  private formatProductImages(products: Product[]) {
-    return products.map((product) => ({
-      ...product,
-      images: product.images?.map((img) => ({
-        ...img,
-        url: this.formatImageUrl(img.url),
-      })),
-    }));
-  }
 
   async createProduct(
     createProductDto: CreateProductDto,
@@ -135,7 +121,7 @@ export class ProductService {
       .orderBy('product.createdAt', 'DESC')
       .getManyAndCount();
 
-    const formattedData = this.formatProductImages(data);
+    const formattedData = formatProductImages(data);
 
     return {
       message: 'Products retrieved successfully.',
@@ -147,6 +133,28 @@ export class ProductService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  async rateProduct(id: string, rateProductDto: RateProductDto) {
+    const product = await this._productRepo.findOne({ where: { id } });
+
+    if (!product) {
+      throw new NotFoundException(`Product with ID "${id}" not found.`);
+    }
+
+    const newRatingCount = product.ratingCount + 1;
+    const currentTotal = product.rating * product.ratingCount;
+    const newRating = (currentTotal + rateProductDto.rating) / newRatingCount;
+
+    product.rating = Math.round(newRating * 100) / 100;
+    product.ratingCount = newRatingCount;
+
+    await this._productRepo.save(product);
+
+    return {
+      message: 'Product rated successfully.',
+      HttpStatus: HttpStatus.OK,
     };
   }
 

@@ -7,6 +7,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
   ValidateNested,
@@ -145,6 +146,22 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => CreateProductImageDto)
   images?: CreateProductImageDto[];
+}
+
+export class RateProductDto {
+  @ApiProperty({
+    type: 'number',
+    example: 4.5,
+    minimum: 1,
+    maximum: 5,
+    description: 'Rating value between 1 and 5',
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  @Type(() => Number)
+  rating: number;
 }
 
 export class CreateProductSwaggerDto extends CreateProductDto {

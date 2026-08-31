@@ -1,5 +1,6 @@
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
+import { configService } from 'src/config/config.service';
 
 interface GenerateNumeroOptions<T> {
   repo: Repository<T>;
@@ -57,4 +58,21 @@ export function formatPrice(value: any): string {
   const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
   return `${formattedInteger}.${decimalPart}`;
+}
+
+export function formatImageUrl(url: string): string {
+  if (url.startsWith('http')) return url;
+  return `${configService.backendUrl}${url}`;
+}
+
+export function formatProductImages<T extends { images?: { url: string }[] }>(
+  products: T[],
+): T[] {
+  return products.map((product) => ({
+    ...product,
+    images: product.images?.map((img) => ({
+      ...img,
+      url: formatImageUrl(img.url),
+    })),
+  }));
 }

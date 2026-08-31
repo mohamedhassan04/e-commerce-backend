@@ -21,7 +21,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateProductSwaggerDto } from './dto/create-product.dto';
+import { CreateProductSwaggerDto, RateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductService } from './product.service';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -71,6 +71,23 @@ export class ProductController {
   @Get('all')
   findAll(@Query() query: ProductQueryDto) {
     return this.productService.findAllProducts(query);
+  }
+
+  //@Method PATCH
+  //@desc Rate a product
+  //@Path: /product/:id/rating
+  @ApiOperation({ summary: 'Rate a product' })
+  @ApiNotFoundResponse({ description: 'Product not found' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Product rated successfully.',
+  })
+  @Patch(':id/rating')
+  rateProduct(
+    @Param('id') id: string,
+    @Body() rateProductDto: RateProductDto,
+  ) {
+    return this.productService.rateProduct(id, rateProductDto);
   }
 
   //@Method GET
