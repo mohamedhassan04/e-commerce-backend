@@ -21,10 +21,8 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import {
-  CreateProductSwaggerDto,
-  RateProductDto,
-} from './dto/create-product.dto';
+import { CreateProductSwaggerDto } from './dto/create-product.dto';
+import { RateProductDto } from './dto/rate-product.dto';
 import { ProductService } from './product.service';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

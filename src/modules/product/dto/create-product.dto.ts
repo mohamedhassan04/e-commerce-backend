@@ -1,95 +1,16 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { plainToInstance, Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
-  Max,
   MaxLength,
-  Min,
   ValidateNested,
 } from 'class-validator';
-
-export class CreateProductVariantDto {
-  @ApiProperty({
-    type: 'string',
-    example: '38',
-    description: 'Custom size label for the variant',
-  })
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(50)
-  size: string;
-
-  @ApiProperty({
-    type: 'number',
-    example: 29.99,
-    description: 'Price for this variant',
-  })
-  @IsNotEmpty()
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  price: number;
-
-  @ApiPropertyOptional({
-    type: 'number',
-    example: 100,
-    description: 'Stock quantity for this variant',
-    default: 0,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Type(() => Number)
-  stock?: number;
-
-  @ApiPropertyOptional({
-    type: 'string',
-    example: 'SHOE-38-BLK',
-    description: 'Stock keeping unit for this variant',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  sku?: string;
-}
-
-export class CreateProductImageDto {
-  @ApiProperty({
-    type: 'string',
-    example: 'https://example.com/image.jpg',
-    description: 'URL of the product image',
-  })
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(500)
-  url: string;
-
-  @ApiPropertyOptional({
-    type: 'string',
-    example: 'Black shoe front view',
-    description: 'Alternative text for the image',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  alt?: string;
-
-  @ApiPropertyOptional({
-    type: 'boolean',
-    example: true,
-    description: 'Whether this is the primary image',
-    default: false,
-  })
-  @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => value === 'true' || value === true)
-  isPrimary?: boolean;
-}
+import { CreateProductVariantDto } from './create-product-variant.dto';
+import { CreateProductImageDto } from './create-product-image.dto';
 
 export class CreateProductDto {
   @ApiProperty({
@@ -123,14 +44,37 @@ export class CreateProductDto {
   isActive?: boolean;
 
   @ApiPropertyOptional({
+    type: 'string',
+    example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    description: 'Category ID to assign to the product',
+  })
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+
+  @ApiPropertyOptional({
     type: [CreateProductVariantDto],
     description: 'Size variants for the product',
   })
   @Transform(({ value }) => {
-    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
-    return Array.isArray(parsed)
-      ? parsed.map((v) => plainToInstance(CreateProductVariantDto, v))
-      : parsed;
+    try {
+      let parsed: unknown;
+      if (typeof value === 'string') {
+        try {
+          parsed = JSON.parse(value);
+        } catch {
+          parsed = JSON.parse('[' + value + ']');
+        }
+      } else {
+        parsed = value;
+      }
+      const array = Array.isArray(parsed) ? parsed : [parsed];
+      return array.map((v) => plainToInstance(CreateProductVariantDto, v));
+    } catch (error) {
+      throw new Error(
+        `Invalid variants JSON: ${error as any}. Expected a JSON array of variant objects.`,
+      );
+    }
   })
   @IsOptional()
   @IsArray()
@@ -148,23 +92,9 @@ export class CreateProductDto {
   images?: CreateProductImageDto[];
 }
 
-export class RateProductDto {
-  @ApiProperty({
-    type: 'number',
-    example: 4.5,
-    minimum: 1,
-    maximum: 5,
-    description: 'Rating value between 1 and 5',
-  })
-  @IsNotEmpty()
-  @IsNumber()
-  @Min(1)
-  @Max(5)
-  @Type(() => Number)
-  rating: number;
-}
-
-export class CreateProductSwaggerDto extends CreateProductDto {
+export class CreateProductSwaggerDto extends OmitType(CreateProductDto, [
+  'images',
+] as const) {
   @ApiProperty({
     type: 'array',
     items: { type: 'string', format: 'binary' },

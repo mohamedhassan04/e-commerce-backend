@@ -6,10 +6,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { CreateProductDto, RateProductDto } from './dto/create-product.dto';
+import { CreateProductDto } from './dto/create-product.dto';
+import { RateProductDto } from './dto/rate-product.dto';
 import { Product } from './entities/product.entity';
 import { ProductImage } from './entities/product-image.entity';
 import { ProductVariant } from './entities/product-variant.entity';
+import { Category } from 'src/modules/category/entities/category.entity';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { formatProductImages } from 'src/shared/utils/utils';
 
@@ -30,12 +32,26 @@ export class ProductService {
     await queryRunner.startTransaction();
 
     try {
+      // If categoryId is provided, verify the category exists
+      let category: Category | null = null;
+      if (createProductDto.categoryId) {
+        category = await queryRunner.manager.findOne(Category, {
+          where: { id: createProductDto.categoryId },
+        });
+        if (!category) {
+          throw new NotFoundException(
+            `Category with ID "${createProductDto.categoryId}" not found.`,
+          );
+        }
+      }
+
       const savedProduct = await queryRunner.manager.save(
         Product,
         queryRunner.manager.create(Product, {
           name: createProductDto.name,
           description: createProductDto.description,
           isActive: createProductDto.isActive ?? true,
+          category: category,
         }),
       );
 
@@ -88,7 +104,8 @@ export class ProductService {
     const qb = this._productRepo
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.variants', 'variant')
-      .leftJoinAndSelect('product.images', 'image');
+      .leftJoinAndSelect('product.images', 'image')
+      .leftJoinAndSelect('product.category', 'category');
 
     if (query.search) {
       qb.andWhere('product.name ILIKE :search', {
