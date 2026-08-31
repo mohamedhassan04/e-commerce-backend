@@ -21,7 +21,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreateProductSwaggerDto, RateProductDto } from './dto/create-product.dto';
+import {
+  CreateProductSwaggerDto,
+  RateProductDto,
+} from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductService } from './product.service';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -82,11 +85,9 @@ export class ProductController {
     status: HttpStatus.OK,
     description: 'Product rated successfully.',
   })
+  @UseGuards(JwtAuthGuard)
   @Patch(':id/rating')
-  rateProduct(
-    @Param('id') id: string,
-    @Body() rateProductDto: RateProductDto,
-  ) {
+  rateProduct(@Param('id') id: string, @Body() rateProductDto: RateProductDto) {
     return this.productService.rateProduct(id, rateProductDto);
   }
 

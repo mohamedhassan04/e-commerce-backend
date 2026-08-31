@@ -137,19 +137,34 @@ export class ProductService {
   }
 
   async rateProduct(id: string, rateProductDto: RateProductDto) {
+    // Find the product by ID in the database
     const product = await this._productRepo.findOne({ where: { id } });
 
+    // If product doesn't exist, throw a 404 error
     if (!product) {
       throw new NotFoundException(`Product with ID "${id}" not found.`);
     }
 
+    // Increment the total number of ratings by 1
+    // e.g. if product was rated by 3 users before, now it's 4
     const newRatingCount = product.ratingCount + 1;
+
+    // Calculate the sum of all previous ratings
+    // e.g. if current avg is 4.00 and ratingCount is 3 => total sum = 4.00 * 3 = 12.00
     const currentTotal = product.rating * product.ratingCount;
+
+    // Calculate new weighted average: (old sum + new rating) / new total count
+    // e.g. (12.00 + 5) / 4 = 4.25
     const newRating = (currentTotal + rateProductDto.rating) / newRatingCount;
 
+    // Round to 2 decimal places and store
+    // e.g. 4.25333... => 4.25
     product.rating = Math.round(newRating * 100) / 100;
+
+    // Update the rating count
     product.ratingCount = newRatingCount;
 
+    // Save the updated product to the database
     await this._productRepo.save(product);
 
     return {
