@@ -1,6 +1,8 @@
 import { UserRole } from 'src/shared/enum/enum.type';
 import { Node } from 'src/shared/node/common.entity';
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, OneToMany } from 'typeorm';
+import { Address } from './address.entity';
+import { PhoneNumber } from './phone-number.entity';
 
 @Entity('tb_users')
 export class Users extends Node {
@@ -21,4 +23,10 @@ export class Users extends Node {
 
   @Column({ default: false, type: 'boolean' })
   isActive: boolean;
+
+  @OneToMany(() => Address, (address) => address.user, { cascade: true })
+  addresses: Address[];
+
+  @OneToMany(() => PhoneNumber, (phone) => phone.user, { cascade: true })
+  phoneNumbers: PhoneNumber[];
 }
