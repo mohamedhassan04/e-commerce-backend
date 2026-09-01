@@ -11,7 +11,6 @@ import {
   ValidateNested,
   ValidatorConstraint,
   ValidatorConstraintInterface,
-  Validate,
 } from 'class-validator';
 
 export class CreateOrderItemDto {
@@ -60,9 +59,7 @@ export class ManualAddressDto {
   @IsString()
   @MaxLength(100)
   country: string;
-}
 
-export class ManualPhoneNumberDto {
   @ApiProperty({ example: '+1234567890' })
   @IsNotEmpty()
   @IsString()
@@ -130,14 +127,4 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   phoneNumberId?: string;
-
-  @ApiPropertyOptional({
-    type: ManualPhoneNumberDto,
-    description:
-      'Manual phone number (use if user enters phone number manually)',
-  })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => ManualPhoneNumberDto)
-  manualPhoneNumber?: ManualPhoneNumberDto;
 }

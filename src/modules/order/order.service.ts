@@ -40,15 +40,15 @@ export class OrderService {
       );
     }
 
-    if (!createOrderDto.phoneNumberId && !createOrderDto.manualPhoneNumber) {
+    if (!createOrderDto.phoneNumberId && !createOrderDto.manualAddress?.phoneNumber) {
       throw new BadRequestException(
-        'A phone number is required. Provide phoneNumberId or manualPhoneNumber.',
+        'A phone number is required. Provide phoneNumberId or include phoneNumber in manualAddress.',
       );
     }
 
-    if (createOrderDto.phoneNumberId && createOrderDto.manualPhoneNumber) {
+    if (createOrderDto.phoneNumberId && createOrderDto.manualAddress?.phoneNumber) {
       throw new BadRequestException(
-        'Provide either phoneNumberId or manualPhoneNumber, not both.',
+        'Provide either phoneNumberId or phoneNumber in manualAddress, not both.',
       );
     }
 
@@ -99,7 +99,7 @@ export class OrderService {
         }
         phoneNumber = savedPhoneNumber.phoneNumber;
       } else {
-        phoneNumber = createOrderDto.manualPhoneNumber.phoneNumber;
+        phoneNumber = createOrderDto.manualAddress.phoneNumber;
       }
 
       let total = 0;
