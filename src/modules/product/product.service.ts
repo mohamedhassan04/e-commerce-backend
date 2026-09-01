@@ -131,6 +131,12 @@ export class ProductService {
       });
     }
 
+    if (query.categoryId) {
+      qb.andWhere('category.id = :categoryId', {
+        categoryId: query.categoryId,
+      });
+    }
+
     const [data, total] = await qb
       .skip(skip)
       .take(limit)

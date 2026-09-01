@@ -38,6 +38,11 @@ export class ProductQueryDto {
   @IsOptional()
   @IsNumberString()
   maxPrice?: number;
+
+  @ApiPropertyOptional({ description: 'Filter by category ID' })
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
 }
 
 export class InvoiceQueryDto {
