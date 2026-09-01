@@ -9,6 +9,9 @@ import {
   MaxLength,
   Min,
   ValidateNested,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  Validate,
 } from 'class-validator';
 
 export class CreateOrderItemDto {
@@ -65,6 +68,32 @@ export class ManualPhoneNumberDto {
   @IsString()
   @MaxLength(20)
   phoneNumber: string;
+}
+
+@ValidatorConstraint({ name: 'AddressValidation', async: false })
+export class AddressValidationConstraint
+  implements ValidatorConstraintInterface
+{
+  validate(value: any) {
+    return true;
+  }
+
+  defaultMessage() {
+    return '';
+  }
+}
+
+@ValidatorConstraint({ name: 'PhoneNumberValidation', async: false })
+export class PhoneNumberValidationConstraint
+  implements ValidatorConstraintInterface
+{
+  validate(value: any) {
+    return true;
+  }
+
+  defaultMessage() {
+    return '';
+  }
 }
 
 export class CreateOrderDto {

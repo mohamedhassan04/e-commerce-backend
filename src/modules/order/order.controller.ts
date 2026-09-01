@@ -40,7 +40,7 @@ export class OrderController {
     @Body() createOrderDto: CreateOrderDto,
     @GetUser() user: Users,
   ) {
-    return this.orderService.createOrder(createOrderDto, user);
+    return this.orderService.createOrder(createOrderDto, user.id);
   }
 
   @ApiOperation({ summary: 'Get current user orders' })
@@ -51,7 +51,7 @@ export class OrderController {
     @Query() query: ProductQueryDto,
     @GetUser() user: Users,
   ) {
-    return this.orderService.findUserOrders(user, query);
+    return this.orderService.findUserOrders(user.id, query);
   }
 
   @ApiOperation({ summary: 'Get all orders (admin)' })
@@ -88,6 +88,6 @@ export class OrderController {
   @UseGuards(JwtAuthGuard)
   @Patch(':id/cancel')
   cancelOrder(@Param('id') id: string, @GetUser() user: Users) {
-    return this.orderService.cancelOrder(id, user);
+    return this.orderService.cancelOrder(id, user.id);
   }
 }

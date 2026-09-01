@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
+import { OrderShippingAddress } from './entities/order-shipping-address.entity';
 import { ProductVariant } from 'src/modules/product/entities/product-variant.entity';
 import { Users } from 'src/modules/users/entities/user.entity';
 import { Address } from 'src/modules/users/entities/address.entity';
@@ -24,46 +25,81 @@ export class OrderService {
     private readonly _orderRepo: Repository<Order>,
   ) {}
 
-  private cleanNullFields(order: Order) {
-    const cleaned = { ...order };
-    if (!cleaned.address) delete cleaned.address;
-    if (!cleaned.phoneNumber) delete cleaned.phoneNumber;
-    if (!cleaned.manualAddressStreet) delete cleaned.manualAddressStreet;
-    if (!cleaned.manualAddressCity) delete cleaned.manualAddressCity;
-    if (!cleaned.manualAddressState) delete cleaned.manualAddressState;
-    if (!cleaned.manualAddressZipCode) delete cleaned.manualAddressZipCode;
-    if (!cleaned.manualAddressCountry) delete cleaned.manualAddressCountry;
-    if (!cleaned.manualPhoneNumber) delete cleaned.manualPhoneNumber;
-    return cleaned;
-  }
-
   // @desc Create a new order
   // @route POST /order
-  async createOrder(createOrderDto: CreateOrderDto, user: Users) {
+  async createOrder(createOrderDto: CreateOrderDto, userId: string) {
+    if (!createOrderDto.addressId && !createOrderDto.manualAddress) {
+      throw new BadRequestException(
+        'An address is required. Provide addressId or manualAddress.',
+      );
+    }
+
+    if (createOrderDto.addressId && createOrderDto.manualAddress) {
+      throw new BadRequestException(
+        'Provide either addressId or manualAddress, not both.',
+      );
+    }
+
+    if (!createOrderDto.phoneNumberId && !createOrderDto.manualPhoneNumber) {
+      throw new BadRequestException(
+        'A phone number is required. Provide phoneNumberId or manualPhoneNumber.',
+      );
+    }
+
+    if (createOrderDto.phoneNumberId && createOrderDto.manualPhoneNumber) {
+      throw new BadRequestException(
+        'Provide either phoneNumberId or manualPhoneNumber, not both.',
+      );
+    }
+
     const queryRunner = this._dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      let address: Address | null = null;
-      let phoneNumber: PhoneNumber | null = null;
+      let street: string;
+      let city: string;
+      let state: string;
+      let zipCode: string;
+      let country: string;
+      let phoneNumber: string;
 
       if (createOrderDto.addressId) {
-        address = await queryRunner.manager.findOne(Address, {
-          where: { id: createOrderDto.addressId, user: { id: user.id } },
+        const address = await queryRunner.manager.findOne(Address, {
+          where: { id: createOrderDto.addressId, user: { id: userId } },
         });
         if (!address) {
           throw new NotFoundException('Adresse non trouvée.');
         }
+        street = address.street;
+        city = address.city;
+        state = address.state;
+        zipCode = address.zipCode;
+        country = address.country;
+      } else {
+        street = createOrderDto.manualAddress.street;
+        city = createOrderDto.manualAddress.city;
+        state = createOrderDto.manualAddress.state;
+        zipCode = createOrderDto.manualAddress.zipCode;
+        country = createOrderDto.manualAddress.country;
       }
 
       if (createOrderDto.phoneNumberId) {
-        phoneNumber = await queryRunner.manager.findOne(PhoneNumber, {
-          where: { id: createOrderDto.phoneNumberId, user: { id: user.id } },
-        });
-        if (!phoneNumber) {
+        const savedPhoneNumber = await queryRunner.manager.findOne(
+          PhoneNumber,
+          {
+            where: {
+              id: createOrderDto.phoneNumberId,
+              user: { id: userId },
+            },
+          },
+        );
+        if (!savedPhoneNumber) {
           throw new NotFoundException('Numéro de téléphone non trouvé.');
         }
+        phoneNumber = savedPhoneNumber.phoneNumber;
+      } else {
+        phoneNumber = createOrderDto.manualPhoneNumber.phoneNumber;
       }
 
       let total = 0;
@@ -102,18 +138,23 @@ export class OrderService {
         orderItems.push(orderItem);
       }
 
+      const shippingAddress = queryRunner.manager.create(
+        OrderShippingAddress,
+        {
+          street,
+          city,
+          state,
+          zipCode,
+          country,
+          phoneNumber,
+        },
+      );
+
       const order = queryRunner.manager.create(Order, {
         total,
-        user,
+        user: { id: userId },
         items: orderItems,
-        address: address,
-        phoneNumber: phoneNumber,
-        manualAddressStreet: createOrderDto.manualAddress?.street,
-        manualAddressCity: createOrderDto.manualAddress?.city,
-        manualAddressState: createOrderDto.manualAddress?.state,
-        manualAddressZipCode: createOrderDto.manualAddress?.zipCode,
-        manualAddressCountry: createOrderDto.manualAddress?.country,
-        manualPhoneNumber: createOrderDto.manualPhoneNumber?.phoneNumber,
+        shippingAddress,
       });
 
       await queryRunner.manager.save(Order, order);
@@ -133,7 +174,7 @@ export class OrderService {
 
   // @desc Get user orders with pagination
   // @route GET /order/my-orders
-  async findUserOrders(user: Users, query: ProductQueryDto) {
+  async findUserOrders(userId: string, query: ProductQueryDto) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -145,9 +186,8 @@ export class OrderService {
       .addSelect(['productVariant.id', 'productVariant.size'])
       .leftJoin('productVariant.product', 'product')
       .addSelect(['product.id', 'product.name'])
-      .leftJoinAndSelect('order.address', 'address')
-      .leftJoinAndSelect('order.phoneNumber', 'phoneNumber')
-      .where('order.user.id = :userId', { userId: user.id })
+      .leftJoinAndSelect('order.shippingAddress', 'shippingAddress')
+      .where('order.user.id = :userId', { userId })
       .orderBy('order.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
@@ -156,7 +196,7 @@ export class OrderService {
 
     return {
       message: 'Orders retrieved successfully.',
-      data: data.map((order) => this.cleanNullFields(order)),
+      data,
       meta: {
         total,
         page,
@@ -180,8 +220,7 @@ export class OrderService {
       .addSelect(['productVariant.id', 'productVariant.size'])
       .leftJoin('productVariant.product', 'product')
       .addSelect(['product.id', 'product.name'])
-      .leftJoinAndSelect('order.address', 'address')
-      .leftJoinAndSelect('order.phoneNumber', 'phoneNumber')
+      .leftJoinAndSelect('order.shippingAddress', 'shippingAddress')
       .leftJoin('order.user', 'user')
       .addSelect(['user.id', 'user.firstName', 'user.lastName', 'user.email'])
       .orderBy('order.createdAt', 'DESC')
@@ -192,7 +231,7 @@ export class OrderService {
 
     return {
       message: 'Orders retrieved successfully.',
-      data: data.map((order) => this.cleanNullFields(order)),
+      data,
       meta: {
         total,
         page,
@@ -210,8 +249,7 @@ export class OrderService {
       .leftJoinAndSelect('order.items', 'items')
       .leftJoinAndSelect('items.productVariant', 'productVariant')
       .leftJoinAndSelect('productVariant.product', 'product')
-      .leftJoinAndSelect('order.address', 'address')
-      .leftJoinAndSelect('order.phoneNumber', 'phoneNumber')
+      .leftJoinAndSelect('order.shippingAddress', 'shippingAddress')
       .leftJoin('order.user', 'user')
       .addSelect(['user.id', 'user.firstName', 'user.lastName', 'user.email'])
       .where('order.id = :orderId', { orderId })
@@ -223,7 +261,7 @@ export class OrderService {
 
     return {
       message: 'Order retrieved successfully.',
-      data: this.cleanNullFields(order),
+      data: order,
     };
   }
 
@@ -250,13 +288,13 @@ export class OrderService {
 
   // @desc Cancel pending order
   // @route PATCH /order/:id/cancel
-  async cancelOrder(orderId: string, user: Users) {
+  async cancelOrder(orderId: string, userId: string) {
     const order = await this._orderRepo
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.items', 'items')
       .leftJoinAndSelect('items.productVariant', 'productVariant')
       .where('order.id = :orderId', { orderId })
-      .andWhere('order.user.id = :userId', { userId: user.id })
+      .andWhere('order.user.id = :userId', { userId })
       .getOne();
 
     if (!order) {
