@@ -7,6 +7,9 @@ import { OrderShippingAddress } from './order-shipping-address.entity';
 
 @Entity('tb_orders')
 export class Order extends Node {
+  @Column({ name: 'order_number', type: 'varchar', length: 20, unique: true })
+  orderNumber: string;
+
   @Column({
     name: 'status',
     type: 'enum',

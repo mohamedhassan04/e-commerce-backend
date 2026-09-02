@@ -10,12 +10,13 @@ import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { OrderShippingAddress } from './entities/order-shipping-address.entity';
 import { ProductVariant } from 'src/modules/product/entities/product-variant.entity';
-import { Users } from 'src/modules/users/entities/user.entity';
 import { Address } from 'src/modules/users/entities/address.entity';
 import { PhoneNumber } from 'src/modules/users/entities/phone-number.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
+import { OrderQueryDto } from './dto/order-query.dto';
+import { generateOrderNumber } from 'src/shared/utils/utils';
 
 @Injectable()
 export class OrderService {
@@ -40,13 +41,19 @@ export class OrderService {
       );
     }
 
-    if (!createOrderDto.phoneNumberId && !createOrderDto.manualAddress?.phoneNumber) {
+    if (
+      !createOrderDto.phoneNumberId &&
+      !createOrderDto.manualAddress?.phoneNumber
+    ) {
       throw new BadRequestException(
         'A phone number is required. Provide phoneNumberId or include phoneNumber in manualAddress.',
       );
     }
 
-    if (createOrderDto.phoneNumberId && createOrderDto.manualAddress?.phoneNumber) {
+    if (
+      createOrderDto.phoneNumberId &&
+      createOrderDto.manualAddress?.phoneNumber
+    ) {
       throw new BadRequestException(
         'Provide either phoneNumberId or phoneNumber in manualAddress, not both.',
       );
@@ -138,19 +145,17 @@ export class OrderService {
         orderItems.push(orderItem);
       }
 
-      const shippingAddress = queryRunner.manager.create(
-        OrderShippingAddress,
-        {
-          street,
-          city,
-          state,
-          zipCode,
-          country,
-          phoneNumber,
-        },
-      );
+      const shippingAddress = queryRunner.manager.create(OrderShippingAddress, {
+        street,
+        city,
+        state,
+        zipCode,
+        country,
+        phoneNumber,
+      });
 
       const order = queryRunner.manager.create(Order, {
+        orderNumber: await generateOrderNumber(queryRunner),
         total,
         user: { id: userId },
         items: orderItems,
@@ -206,9 +211,9 @@ export class OrderService {
     };
   }
 
-  // @desc Get all orders with pagination (admin)
+  // @desc Get all orders with pagination and filters (admin)
   // @route GET /order/all
-  async findAllOrders(query: ProductQueryDto) {
+  async findAllOrders(query: OrderQueryDto) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -222,8 +227,19 @@ export class OrderService {
       .addSelect(['product.id', 'product.name'])
       .leftJoinAndSelect('order.shippingAddress', 'shippingAddress')
       .leftJoin('order.user', 'user')
-      .addSelect(['user.id', 'user.firstName', 'user.lastName', 'user.email'])
-      .orderBy('order.createdAt', 'DESC')
+      .addSelect(['user.id', 'user.firstName', 'user.lastName', 'user.email']);
+
+    if (query.orderNumber) {
+      qb.andWhere('order.orderNumber ILIKE :orderNumber', {
+        orderNumber: `%${query.orderNumber}%`,
+      });
+    }
+
+    if (query.status) {
+      qb.andWhere('order.status = :status', { status: query.status });
+    }
+
+    qb.orderBy('order.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
 

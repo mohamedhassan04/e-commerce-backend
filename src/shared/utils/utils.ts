@@ -65,6 +65,17 @@ export function formatImageUrl(url: string): string {
   return `${configService.backendUrl}${url}`;
 }
 
+export async function generateOrderNumber(
+  queryRunner: { query: (sql: string) => Promise<any[]> },
+): Promise<string> {
+  const result = await queryRunner.query(
+    `SELECT nextval('order_number_seq') AS nextval`,
+  );
+  const seq = Number(result[0].nextval);
+  const year = new Date().getFullYear();
+  return `ORD-${year}-${String(seq).padStart(6, '0')}`;
+}
+
 export function formatProductImages<T extends { images?: { url: string }[] }>(
   products: T[],
 ): T[] {

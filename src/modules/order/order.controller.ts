@@ -24,6 +24,7 @@ import { Roles } from 'src/shared/decorators/roles.decorator';
 import { GetUser } from 'src/shared/decorators/user.decorator';
 import { Users } from '../users/entities/user.entity';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
+import { OrderQueryDto } from './dto/order-query.dto';
 
 @ApiTags('Order')
 @Controller('order')
@@ -59,7 +60,7 @@ export class OrderController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('all')
-  findAllOrders(@Query() query: ProductQueryDto) {
+  findAllOrders(@Query() query: OrderQueryDto) {
     return this.orderService.findAllOrders(query);
   }
 
