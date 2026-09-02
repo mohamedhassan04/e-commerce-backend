@@ -31,10 +31,25 @@ async function bootstrap() {
   app.use(json({ limit: '20mb' }));
   app.use(urlencoded({ extended: true, limit: '20mb' }));
 
-  app.use(helmet());
+  app.use(helmet({
+    crossOriginResourcePolicy: false,
+  }));
+
+  // Enable CORS before static assets so /uploads routes get CORS headers
+  app.enableCors({
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true,
+  });
 
   // Serve static files from uploads folder
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads' });
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads',
+    setHeaders: (res) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    },
+  });
 
   // Enable validation globally
   app.useGlobalPipes(
@@ -44,12 +59,6 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-
-  app.enableCors({
-    origin: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    credentials: true,
-  });
 
   //set global prefix for all routes
   app.setGlobalPrefix(config.apiPrefix);
