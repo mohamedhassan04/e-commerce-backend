@@ -18,6 +18,7 @@ import { Address } from './entities/address.entity';
 import { PhoneNumber } from './entities/phone-number.entity';
 import { generateResetCode } from 'src/shared/utils/utils';
 import { EmailService } from 'src/shared/send-mail/mail.service';
+import { UserQueryDto } from 'src/shared/dto/pagination-query.dto';
 
 @Injectable()
 export class UsersService {
@@ -312,6 +313,57 @@ export class UsersService {
     return {
       message: 'Mot de passe changé avec succés.',
       HttpStatus: HttpStatus.OK,
+    };
+  }
+
+  // @desc Get all users for admin (only USER role) with filters and pagination
+  // @route GET /users/admin/all
+  async getAllUsersForAdmin(query: UserQueryDto) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const qb = this._userRepo
+      .createQueryBuilder('user')
+      .select([
+        'user.id',
+        'user.firstName',
+        'user.lastName',
+        'user.email',
+        'user.role',
+        'user.isActive',
+        'user.isVerified',
+        'user.createdAt',
+      ])
+      .where('user.role = :role', { role: 'USER' });
+
+    if (query.email) {
+      qb.andWhere('LOWER(user.email) LIKE :email', {
+        email: `%${query.email.toLowerCase()}%`,
+      });
+    }
+
+    if (query.fullName) {
+      qb.andWhere(
+        "LOWER(CONCAT(user.firstName, ' ', user.lastName)) LIKE :fullName",
+        { fullName: `%${query.fullName.toLowerCase()}%` },
+      );
+    }
+
+    const [users, total] = await qb
+      .orderBy('user.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data: users,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 }

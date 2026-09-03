@@ -119,13 +119,13 @@ export class UserQueryDto {
   @IsNumberString()
   page?: number;
 
-  @ApiPropertyOptional({ description: 'Search' })
+  @ApiPropertyOptional({ description: 'Filter by email (case-insensitive)' })
   @IsOptional()
   @IsString()
-  search?: string;
+  email?: string;
 
-  @ApiPropertyOptional({ description: 'Search by status' })
+  @ApiPropertyOptional({ description: 'Filter by full name (case-insensitive, matches firstName or lastName)' })
   @IsOptional()
   @IsString()
-  status?: string;
+  fullName?: string;
 }

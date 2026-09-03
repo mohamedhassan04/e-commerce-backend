@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
@@ -23,11 +24,23 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { GetUser } from 'src/shared/decorators/user.decorator';
 import { Users } from './entities/user.entity';
+import { UserQueryDto } from 'src/shared/dto/pagination-query.dto';
 
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  //@Method GET
+  //@desc Get all users for admin (only USER role)
+  //@Path: /users/admin/all
+  @ApiOperation({ summary: 'Get all users for admin (USER role only)' })
+  @Get('admin/all')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  getAllUsersForAdmin(@Query() query: UserQueryDto) {
+    return this.usersService.getAllUsersForAdmin(query);
+  }
 
   //@Method GET
   //@desc Get a user by email
