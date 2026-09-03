@@ -289,4 +289,29 @@ export class UsersService {
       HttpStatus: HttpStatus.OK,
     };
   }
+
+  // @desc Change password for connected user
+  // @route PATCH /users/change-password
+  async changePassword(userId: string, oldPassword: string, newPassword: string) {
+    const user = await this._userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé.');
+    }
+
+    const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isOldPasswordValid) {
+      throw new BadRequestException('Ancien mot de passe incorrect.');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashedPassword;
+    await this._userRepo.save(user);
+
+    return {
+      message: 'Mot de passe changé avec succés.',
+      HttpStatus: HttpStatus.OK,
+    };
+  }
 }

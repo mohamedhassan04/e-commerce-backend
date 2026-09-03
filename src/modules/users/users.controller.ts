@@ -17,6 +17,7 @@ import { UpdatePhoneNumberDto } from './dto/update-phone-number.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyAccountDto } from './dto/verify-account.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
@@ -120,5 +121,16 @@ export class UsersController {
       dto.resetCode,
       dto.newPassword,
     );
+  }
+
+  //@Method PATCH
+  //@desc Change password for connected user
+  //@Path: /users/change-password
+  @ApiOperation({ summary: 'Change password for connected user' })
+  @Patch('change-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('USER')
+  changePassword(@Body() dto: ChangePasswordDto, @GetUser() user: Users) {
+    return this.usersService.changePassword(user.id, dto.oldPassword, dto.newPassword);
   }
 }
