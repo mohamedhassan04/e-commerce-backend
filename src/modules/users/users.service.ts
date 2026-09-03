@@ -293,7 +293,11 @@ export class UsersService {
 
   // @desc Change password for connected user
   // @route PATCH /users/change-password
-  async changePassword(userId: string, oldPassword: string, newPassword: string) {
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+  ) {
     const user = await this._userRepo.findOne({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('Utilisateur non trouvé.');
@@ -337,17 +341,25 @@ export class UsersService {
       ])
       .where('user.role = :role', { role: 'USER' });
 
-    if (query.email) {
-      qb.andWhere('LOWER(user.email) LIKE :email', {
-        email: `%${query.email.toLowerCase()}%`,
-      });
-    }
+    if (query.email || query.fullName) {
+      const emailLower = query.email ? `%${query.email.toLowerCase()}%` : null;
+      const fullNameLower = query.fullName
+        ? `%${query.fullName.toLowerCase()}%`
+        : null;
 
-    if (query.fullName) {
-      qb.andWhere(
-        "LOWER(CONCAT(user.firstName, ' ', user.lastName)) LIKE :fullName",
-        { fullName: `%${query.fullName.toLowerCase()}%` },
-      );
+      if (emailLower && fullNameLower) {
+        qb.andWhere(
+          `(LOWER(user.email) LIKE :email OR LOWER(CONCAT(user.firstName, ' ', user.lastName)) LIKE :fullName)`,
+          { email: emailLower, fullName: fullNameLower },
+        );
+      } else if (emailLower) {
+        qb.andWhere('LOWER(user.email) LIKE :email', { email: emailLower });
+      } else if (fullNameLower) {
+        qb.andWhere(
+          "LOWER(CONCAT(user.firstName, ' ', user.lastName)) LIKE :fullName",
+          { fullName: fullNameLower },
+        );
+      }
     }
 
     const [users, total] = await qb
