@@ -1,19 +1,16 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthenticationService } from './auth.service';
 import { LocalStrategy } from './strategies/local-strategy';
 import { JwtStrategy } from './strategies/jwt-strategy';
 import { AuthenticationController } from './auth.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { Users } from '../users/entities/user.entity';
-import { UsersService } from '../users/users.service';
+import { UsersModule } from '../users/users.module';
 
-/* If we import JwtModule, we don't need to import JwtService */
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([Users]),
+    UsersModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -22,7 +19,7 @@ import { UsersService } from '../users/users.service';
       }),
     }),
   ],
-  providers: [AuthenticationService, UsersService, LocalStrategy, JwtStrategy],
+  providers: [AuthenticationService, LocalStrategy, JwtStrategy],
   controllers: [AuthenticationController],
 })
 export class AuthenticationModule {}

@@ -1,7 +1,14 @@
 import { Node } from 'src/shared/node/common.entity';
 import { OrderStatus } from 'src/shared/enum/enum.type';
 import { Users } from 'src/modules/users/entities/user.entity';
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { OrderItem } from './order-item.entity';
 import { OrderShippingAddress } from './order-shipping-address.entity';
 

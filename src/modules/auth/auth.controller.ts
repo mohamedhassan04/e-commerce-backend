@@ -15,7 +15,6 @@ import { Response as Res } from 'express';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginUserDto } from '../users/dto/login-user.dto';
 import { CreateUserDto } from '../users/dto/create-user.dto';
-import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
 
 @ApiTags('Authentication')
@@ -23,7 +22,6 @@ import { ConfigService } from '@nestjs/config';
 export class AuthenticationController {
   constructor(
     private authService: AuthenticationService,
-    private usersService: UsersService,
     private configService: ConfigService,
   ) {}
 
@@ -91,7 +89,7 @@ export class AuthenticationController {
   @ApiBody({ type: CreateUserDto })
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
-    return await this.usersService.register(createUserDto);
+    return await this.authService.register(createUserDto);
   }
 
   //@Method GET

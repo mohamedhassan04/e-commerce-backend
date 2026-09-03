@@ -24,6 +24,29 @@ export class Users extends Node {
   @Column({ default: false, type: 'boolean' })
   isActive: boolean;
 
+  @Column({ name: 'is_verified', default: false, type: 'boolean' })
+  isVerified: boolean;
+
+  @Column({ name: 'verification_code', type: 'varchar', nullable: true })
+  verificationCode: string;
+
+  @Column({
+    name: 'verification_code_expiry',
+    type: 'timestamp',
+    nullable: true,
+  })
+  verificationCodeExpiry: Date;
+
+  @Column({ name: 'reset_password_code', type: 'varchar', nullable: true })
+  resetPasswordCode: string;
+
+  @Column({
+    name: 'reset_password_code_expiry',
+    type: 'timestamp',
+    nullable: true,
+  })
+  resetPasswordCodeExpiry: Date;
+
   @OneToMany(() => Address, (address) => address.user, { cascade: true })
   addresses: Address[];
 

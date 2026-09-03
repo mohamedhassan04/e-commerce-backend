@@ -239,9 +239,7 @@ export class OrderService {
       qb.andWhere('order.status = :status', { status: query.status });
     }
 
-    qb.orderBy('order.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit);
+    qb.orderBy('order.createdAt', 'DESC').skip(skip).take(limit);
 
     const [data, total] = await qb.getManyAndCount();
 

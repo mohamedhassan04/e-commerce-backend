@@ -37,10 +37,7 @@ export class OrderController {
   @ApiResponse({ status: 400, description: 'Insufficient stock.' })
   @UseGuards(JwtAuthGuard)
   @Post()
-  createOrder(
-    @Body() createOrderDto: CreateOrderDto,
-    @GetUser() user: Users,
-  ) {
+  createOrder(@Body() createOrderDto: CreateOrderDto, @GetUser() user: Users) {
     return this.orderService.createOrder(createOrderDto, user.id);
   }
 
@@ -48,10 +45,7 @@ export class OrderController {
   @ApiResponse({ status: 200, description: 'Orders retrieved successfully.' })
   @UseGuards(JwtAuthGuard)
   @Get('my-orders')
-  findMyOrders(
-    @Query() query: ProductQueryDto,
-    @GetUser() user: Users,
-  ) {
+  findMyOrders(@Query() query: ProductQueryDto, @GetUser() user: Users) {
     return this.orderService.findUserOrders(user.id, query);
   }
 
@@ -75,11 +69,17 @@ export class OrderController {
 
   @ApiOperation({ summary: 'Update order status (admin)' })
   @ApiNotFoundResponse({ description: 'Order not found' })
-  @ApiResponse({ status: 200, description: 'Order status updated successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Order status updated successfully.',
+  })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Patch(':id/status')
-  updateOrderStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
+  updateOrderStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateOrderStatusDto,
+  ) {
     return this.orderService.updateOrderStatus(id, dto);
   }
 

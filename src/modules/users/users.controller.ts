@@ -1,16 +1,29 @@
-import { Controller, Get, Body, Param, Put, Patch, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Body,
+  Param,
+  Put,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
-import { ApiOperation, ApiParam } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { AddAddressesDto } from './dto/add-addresses.dto';
 import { AddPhoneNumbersDto } from './dto/add-phone-numbers.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { UpdatePhoneNumberDto } from './dto/update-phone-number.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyAccountDto } from './dto/verify-account.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { GetUser } from 'src/shared/decorators/user.decorator';
 import { Users } from './entities/user.entity';
 
+@ApiTags('Users')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -76,5 +89,36 @@ export class UsersController {
     @GetUser() user: Users,
   ) {
     return this.usersService.updatePhoneNumber(user.id, phoneId, dto);
+  }
+
+  //@Method POST
+  //@desc Verify account with verification code
+  //@Path: /users/verify-account
+  @ApiOperation({ summary: 'Verify account with verification code' })
+  @Post('verify-account')
+  async verifyAccount(@Body() dto: VerifyAccountDto) {
+    return this.usersService.verifyAccount(dto.email, dto.verificationCode);
+  }
+
+  //@Method POST
+  //@desc Send forgot password code to email
+  //@Path: /users/forgot-password
+  @ApiOperation({ summary: 'Send forgot password code' })
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.usersService.forgotPassword(dto.email);
+  }
+
+  //@Method POST
+  //@desc Reset password with code
+  //@Path: /users/reset-password
+  @ApiOperation({ summary: 'Reset password with code' })
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.usersService.resetPassword(
+      dto.email,
+      dto.resetCode,
+      dto.newPassword,
+    );
   }
 }

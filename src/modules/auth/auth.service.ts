@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { Users } from '../users/entities/user.entity';
 import { LoginUserDto } from '../users/dto/login-user.dto';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 
 @Injectable()
 export class AuthenticationService {
@@ -35,5 +36,9 @@ export class AuthenticationService {
     return {
       accessToken,
     };
+  }
+
+  async register(createUserDto: CreateUserDto) {
+    return this.userService.register(createUserDto);
   }
 }

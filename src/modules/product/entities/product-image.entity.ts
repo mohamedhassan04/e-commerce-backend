@@ -13,7 +13,9 @@ export class ProductImage extends Node {
   @Column({ name: 'is_primary', type: 'boolean', default: false })
   isPrimary: boolean;
 
-  @ManyToOne(() => Product, (product) => product.images, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Product, (product) => product.images, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'product_id' })
   product: Product;
 }

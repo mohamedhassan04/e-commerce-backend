@@ -13,10 +13,18 @@ export class ProductVariant extends Node {
   @Column({ name: 'stock', type: 'int', default: 0 })
   stock: number;
 
-  @Column({ name: 'sku', type: 'varchar', length: 100, unique: true, nullable: true })
+  @Column({
+    name: 'sku',
+    type: 'varchar',
+    length: 100,
+    unique: true,
+    nullable: true,
+  })
   sku: string;
 
-  @ManyToOne(() => Product, (product) => product.variants, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Product, (product) => product.variants, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'product_id' })
   product: Product;
 }

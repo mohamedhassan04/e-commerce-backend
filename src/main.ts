@@ -31,9 +31,11 @@ async function bootstrap() {
   app.use(json({ limit: '20mb' }));
   app.use(urlencoded({ extended: true, limit: '20mb' }));
 
-  app.use(helmet({
-    crossOriginResourcePolicy: false,
-  }));
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: false,
+    }),
+  );
 
   // Enable CORS before static assets so /uploads routes get CORS headers
   app.enableCors({

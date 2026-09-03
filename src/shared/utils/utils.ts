@@ -65,9 +65,9 @@ export function formatImageUrl(url: string): string {
   return `${configService.backendUrl}${url}`;
 }
 
-export async function generateOrderNumber(
-  queryRunner: { query: (sql: string) => Promise<any[]> },
-): Promise<string> {
+export async function generateOrderNumber(queryRunner: {
+  query: (sql: string) => Promise<any[]>;
+}): Promise<string> {
   const result = await queryRunner.query(
     `SELECT nextval('order_number_seq') AS nextval`,
   );

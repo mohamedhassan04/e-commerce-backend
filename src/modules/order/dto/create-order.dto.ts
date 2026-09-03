@@ -68,9 +68,7 @@ export class ManualAddressDto {
 }
 
 @ValidatorConstraint({ name: 'AddressValidation', async: false })
-export class AddressValidationConstraint
-  implements ValidatorConstraintInterface
-{
+export class AddressValidationConstraint implements ValidatorConstraintInterface {
   validate(value: any) {
     return true;
   }
@@ -81,9 +79,7 @@ export class AddressValidationConstraint
 }
 
 @ValidatorConstraint({ name: 'PhoneNumberValidation', async: false })
-export class PhoneNumberValidationConstraint
-  implements ValidatorConstraintInterface
-{
+export class PhoneNumberValidationConstraint implements ValidatorConstraintInterface {
   validate(value: any) {
     return true;
   }

@@ -1,4 +1,10 @@
-import { ConflictException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateAddressDto } from './dto/create-address.dto';
@@ -10,16 +16,19 @@ import { Users } from './entities/user.entity';
 import { DataSource, Repository } from 'typeorm';
 import { Address } from './entities/address.entity';
 import { PhoneNumber } from './entities/phone-number.entity';
+import { generateResetCode } from 'src/shared/utils/utils';
+import { EmailService } from 'src/shared/send-mail/mail.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(Users) private readonly _userRepo: Repository<Users>,
     private readonly dataSource: DataSource,
+    private readonly emailService: EmailService,
   ) {}
 
   // @desc Register a new user
-  // @route POST /users/register
+  // @route POST /auth/register
   async register(createUserDto: CreateUserDto) {
     try {
       const existingUser = await this._userRepo.findOne({
@@ -39,8 +48,22 @@ export class UsersService {
 
       await this._userRepo.save(user);
 
+      const verificationCode = generateResetCode(10);
+      const expiry = new Date();
+      expiry.setMinutes(expiry.getMinutes() + 30);
+
+      user.verificationCode = verificationCode;
+      user.verificationCodeExpiry = expiry;
+      await this._userRepo.save(user);
+
+      await this.emailService.sendEmailCreateUserAccount(
+        createUserDto.email,
+        verificationCode,
+      );
+
       return {
-        message: 'Compte créé avec succés.',
+        message:
+          'Compte créé avec succés. Un email de vérification a été envoyé.',
         HttpStatus: HttpStatus.CREATED,
       };
     } catch (error) {
@@ -94,7 +117,11 @@ export class UsersService {
 
   // @desc Update an address of connected user
   // @route PATCH /users/addresses/:addressId
-  async updateAddress(userId: string, addressId: string, dto: UpdateAddressDto) {
+  async updateAddress(
+    userId: string,
+    addressId: string,
+    dto: UpdateAddressDto,
+  ) {
     const address = await this.dataSource.manager.findOne(Address, {
       where: { id: addressId, user: { id: userId } },
     });
@@ -139,7 +166,11 @@ export class UsersService {
 
   // @desc Update a phone number of connected user
   // @route PATCH /users/phone-numbers/:phoneId
-  async updatePhoneNumber(userId: string, phoneId: string, dto: UpdatePhoneNumberDto) {
+  async updatePhoneNumber(
+    userId: string,
+    phoneId: string,
+    dto: UpdatePhoneNumberDto,
+  ) {
     const phone = await this.dataSource.manager.findOne(PhoneNumber, {
       where: { id: phoneId, user: { id: userId } },
     });
@@ -152,6 +183,109 @@ export class UsersService {
 
     return {
       message: 'Numéro de téléphone mis à jour avec succés.',
+      HttpStatus: HttpStatus.OK,
+    };
+  }
+
+  // @desc Verify account with verification code
+  // @route POST /users/verify-account
+  async verifyAccount(email: string, verificationCode: string) {
+    const user = await this._userRepo.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé.');
+    }
+
+    if (user.isVerified) {
+      throw new BadRequestException('Ce compte est déjà vérifié.');
+    }
+
+    if (!user.verificationCode || !user.verificationCodeExpiry) {
+      throw new BadRequestException(
+        'Aucun code de vérification trouvé. Veuillez demander un nouveau code.',
+      );
+    }
+
+    if (user.verificationCode !== verificationCode) {
+      throw new BadRequestException('Code de vérification invalide.');
+    }
+
+    if (new Date() > user.verificationCodeExpiry) {
+      throw new BadRequestException(
+        'Le code de vérification a expiré. Veuillez demander un nouveau code.',
+      );
+    }
+
+    user.isVerified = true;
+    user.verificationCode = null;
+    user.verificationCodeExpiry = null;
+    await this._userRepo.save(user);
+
+    return {
+      message: 'Compte vérifié avec succés.',
+      HttpStatus: HttpStatus.OK,
+    };
+  }
+
+  // @desc Send forgot password code
+  // @route POST /users/forgot-password
+  async forgotPassword(email: string) {
+    const user = await this._userRepo.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException(
+        'Aucun compte associé à cette adresse email.',
+      );
+    }
+
+    const resetCode = generateResetCode(10);
+    const expiry = new Date();
+    expiry.setMinutes(expiry.getMinutes() + 30);
+
+    user.resetPasswordCode = resetCode;
+    user.resetPasswordCodeExpiry = expiry;
+    await this._userRepo.save(user);
+
+    await this.emailService.sendEmailForgotPassword(email, resetCode);
+
+    return {
+      message: 'Code de réinitialisation envoyé avec succés.',
+      HttpStatus: HttpStatus.OK,
+    };
+  }
+
+  // @desc Reset password with code
+  // @route POST /users/reset-password
+  async resetPassword(email: string, resetCode: string, newPassword: string) {
+    const user = await this._userRepo.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé.');
+    }
+
+    if (!user.resetPasswordCode || !user.resetPasswordCodeExpiry) {
+      throw new BadRequestException(
+        "Aucun code de réinitialisation trouvé. Veuillez d'abord demander la réinitialisation.",
+      );
+    }
+
+    if (user.resetPasswordCode !== resetCode) {
+      throw new BadRequestException('Code de réinitialisation invalide.');
+    }
+
+    if (new Date() > user.resetPasswordCodeExpiry) {
+      throw new BadRequestException(
+        'Le code de réinitialisation a expiré. Veuillez demander un nouveau code.',
+      );
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashedPassword;
+    user.resetPasswordCode = null;
+    user.resetPasswordCodeExpiry = null;
+    await this._userRepo.save(user);
+
+    return {
+      message: 'Mot de passe réinitialisé avec succés.',
       HttpStatus: HttpStatus.OK,
     };
   }
