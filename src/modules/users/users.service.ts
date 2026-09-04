@@ -13,7 +13,7 @@ import { UpdateAddressDto } from './dto/update-address.dto';
 import { UpdatePhoneNumberDto } from './dto/update-phone-number.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from './entities/user.entity';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Not, Repository } from 'typeorm';
 import { Address } from './entities/address.entity';
 import { PhoneNumber } from './entities/phone-number.entity';
 import { generateResetCode } from 'src/shared/utils/utils';
@@ -90,6 +90,32 @@ export class UsersService {
     });
   }
 
+  // @desc Get addresses and phone numbers of connected user
+  // @route GET /users/me/addresses-and-phones
+  async getAddressesAndPhones(userId: string) {
+    const user = await this._userRepo.findOne({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé.');
+    }
+
+    const addresses = await this.dataSource.manager.find(Address, {
+      where: { user: { id: userId } },
+      order: { createdAt: 'ASC' },
+    });
+
+    const phoneNumbers = await this.dataSource.manager.find(PhoneNumber, {
+      where: { user: { id: userId } },
+      order: { createdAt: 'ASC' },
+    });
+
+    return {
+      message: 'Addresses and phone numbers retrieved successfully.',
+      data: { addresses, phoneNumbers },
+    };
+  }
+
   // @desc Add addresses to connected user
   // @route PUT /users/addresses
   async addAddresses(userId: string, addresses: CreateAddressDto[]) {
@@ -99,6 +125,15 @@ export class UsersService {
     });
     if (!user) {
       throw new ConflictException('Utilisateur non trouvé.');
+    }
+
+    const hasDefault = addresses.some((a) => a.isDefault);
+    if (hasDefault) {
+      await this.dataSource.manager.update(
+        Address,
+        { user: { id: userId }, isDefault: true },
+        { isDefault: false },
+      );
     }
 
     const addressEntities = addresses.map((addr) =>
@@ -130,6 +165,14 @@ export class UsersService {
       throw new NotFoundException('Adresse non trouvée.');
     }
 
+    if (dto.isDefault === true) {
+      await this.dataSource.manager.update(
+        Address,
+        { user: { id: userId }, isDefault: true, id: Not(addressId) },
+        { isDefault: false },
+      );
+    }
+
     Object.assign(address, dto);
     await this.dataSource.manager.save(address);
 
@@ -148,6 +191,15 @@ export class UsersService {
     });
     if (!user) {
       throw new ConflictException('Utilisateur non trouvé.');
+    }
+
+    const hasDefault = phoneNumbers.some((p) => p.isDefault);
+    if (hasDefault) {
+      await this.dataSource.manager.update(
+        PhoneNumber,
+        { user: { id: userId }, isDefault: true },
+        { isDefault: false },
+      );
     }
 
     const phoneEntities = phoneNumbers.map((phone) =>
@@ -177,6 +229,14 @@ export class UsersService {
     });
     if (!phone) {
       throw new NotFoundException('Numéro de téléphone non trouvé.');
+    }
+
+    if (dto.isDefault === true) {
+      await this.dataSource.manager.update(
+        PhoneNumber,
+        { user: { id: userId }, isDefault: true, id: Not(phoneId) },
+        { isDefault: false },
+      );
     }
 
     Object.assign(phone, dto);

@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsNotEmpty,
@@ -17,6 +17,16 @@ export class CreateAddressDto {
   @IsString()
   @MaxLength(255)
   street: string;
+
+  @ApiPropertyOptional({
+    type: 'string',
+    example: 'Apt 4B',
+    description: 'Apt / suite',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  apt?: string;
 
   @ApiProperty({
     type: 'string',

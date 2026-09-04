@@ -14,6 +14,16 @@ export class UpdateAddressDto {
 
   @ApiPropertyOptional({
     type: 'string',
+    example: 'Apt 4B',
+    description: 'Apt / suite',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  apt?: string;
+
+  @ApiPropertyOptional({
+    type: 'string',
     example: 'New York',
     description: 'City',
   })

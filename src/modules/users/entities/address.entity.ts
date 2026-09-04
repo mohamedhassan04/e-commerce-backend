@@ -7,6 +7,9 @@ export class Address extends Node {
   @Column({ name: 'street', type: 'varchar', length: 255 })
   street: string;
 
+  @Column({ name: 'apt', type: 'varchar', length: 255, nullable: true })
+  apt: string;
+
   @Column({ name: 'city', type: 'varchar', length: 100 })
   city: string;
 

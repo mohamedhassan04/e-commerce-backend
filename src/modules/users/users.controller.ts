@@ -51,6 +51,17 @@ export class UsersController {
     return this.usersService.findOneUser(email);
   }
 
+  //@Method GET
+  //@desc Get addresses and phone numbers of connected user
+  //@Path: /users/me/addresses-and-phones
+  @ApiOperation({ summary: 'Get addresses and phone numbers of current user' })
+  @Get('me/addresses-and-phones')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('USER')
+  getMyAddressesAndPhones(@GetUser() user: Users) {
+    return this.usersService.getAddressesAndPhones(user.id);
+  }
+
   //@Method PUT
   //@desc Add addresses to connected user
   //@Path: /users/addresses
