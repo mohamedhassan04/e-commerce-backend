@@ -47,7 +47,7 @@ export class UsersController {
   //@Path: /users/get-user-by-email
   @ApiOperation({ summary: 'Get One User' })
   @Get('get-user-by-email')
-  findOne(@Body() email: string) {
+  findOne(@Query('email') email: string) {
     return this.usersService.findOneUser(email);
   }
 
