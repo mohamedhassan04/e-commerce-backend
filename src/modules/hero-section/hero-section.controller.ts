@@ -6,7 +6,6 @@ import {
   HttpStatus,
   Param,
   Patch,
-  Put,
   Post,
   UploadedFile,
   UseGuards,
@@ -21,9 +20,8 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { UpdateHeroSectionDto } from './dto/update-hero-section.dto';
-import { UpdateImageOrderDto } from './dto/update-image-order.dto';
-import { UpdateImageActiveDto } from './dto/update-image-active.dto';
+import { CreateHeroSlideDto } from './dto/create-hero-slide.dto';
+import { UpdateHeroSlideDto } from './dto/update-hero-slide.dto';
 import { HeroSectionService } from './hero-section.service';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -36,132 +34,164 @@ export class HeroSectionController {
   constructor(private readonly heroSectionService: HeroSectionService) {}
 
   //@Method GET
-  //@desc Get active hero section (public)
+  //@desc Get active hero slides (public)
   //@Path: /hero-section
-  @ApiOperation({ summary: 'Get active hero section' })
+  @ApiOperation({ summary: 'Get active hero slides' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Hero section retrieved successfully.',
+    description: 'Hero slides retrieved successfully.',
   })
   @Get()
-  getActiveHeroSection() {
-    return this.heroSectionService.getActiveHeroSection();
+  getActiveSlides() {
+    return this.heroSectionService.getActiveSlides();
   }
 
   //@Method GET
-  //@desc Get hero section for admin (includes all images)
+  //@desc Get all hero slides for admin
   //@Path: /hero-section/admin
-  @ApiOperation({ summary: 'Get hero section for admin' })
+  @ApiOperation({ summary: 'Get all hero slides for admin' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Hero section retrieved successfully.',
+    description: 'Hero slides retrieved successfully.',
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @Get('admin')
-  getHeroSectionForAdmin() {
-    return this.heroSectionService.getHeroSectionForAdmin();
-  }
-
-  //@Method PUT
-  //@desc Update hero section slogan and sub slogan
-  //@Path: /hero-section
-  @ApiOperation({ summary: 'Update hero section' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Hero section updated successfully.',
-  })
-  @ApiResponse({
-    status: HttpStatus.INTERNAL_SERVER_ERROR,
-    description: 'Failed to update hero section.',
-  })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  @Put()
-  updateHeroSection(@Body() updateHeroSectionDto: UpdateHeroSectionDto) {
-    return this.heroSectionService.updateHeroSection(updateHeroSectionDto);
+  getAllSlides() {
+    return this.heroSectionService.getAllSlides();
   }
 
   //@Method POST
-  //@desc Add image to hero section carousel
-  //@Path: /hero-section/image
-  @ApiOperation({ summary: 'Add image to hero section carousel' })
+  //@desc Create a new hero slide
+  //@Path: /hero-section
+  @ApiOperation({ summary: 'Create a new hero slide' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['tag', 'headline1', 'headline2', 'body'],
+      properties: {
+        image: { type: 'string', format: 'binary' },
+        tag: { type: 'string', example: 'Summer harvest · Fresh-pressed' },
+        headline1: { type: 'string', example: 'Good things,' },
+        headline2: { type: 'string', example: 'made slowly.' },
+        body: {
+          type: 'string',
+          example: 'Early-harvest olive oil, pantry staples...',
+        },
+        chip1: { type: 'string', example: 'Free shipping over $60' },
+        chip2: { type: 'string', example: 'Grower-direct' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Hero slide created successfully.',
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Failed to create hero slide.',
+  })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @UseInterceptors(FileInterceptor('image', multerConfig))
+  @Post()
+  createSlide(
+    @Body() createHeroSlideDto: CreateHeroSlideDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.heroSectionService.createSlide(createHeroSlideDto, file);
+  }
+
+  //@Method PATCH
+  //@desc Update a hero slide
+  //@Path: /hero-section/:id
+  @ApiOperation({ summary: 'Update a hero slide' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
         image: { type: 'string', format: 'binary' },
+        tag: { type: 'string' },
+        headline1: { type: 'string' },
+        headline2: { type: 'string' },
+        body: { type: 'string' },
+        chip1: { type: 'string' },
+        chip2: { type: 'string' },
+        displayOrder: { type: 'integer' },
+        isActive: { type: 'boolean' },
       },
     },
   })
+  @ApiNotFoundResponse({ description: 'Hero slide not found' })
   @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Image added to hero section successfully.',
-  })
-  @ApiResponse({
-    status: HttpStatus.INTERNAL_SERVER_ERROR,
-    description: 'Failed to add image.',
+    status: HttpStatus.OK,
+    description: 'Hero slide updated successfully.',
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @UseInterceptors(FileInterceptor('image', multerConfig))
-  @Post('image')
-  addImage(@UploadedFile() file: Express.Multer.File) {
-    return this.heroSectionService.addImage(file);
+  @Patch(':id')
+  updateSlide(
+    @Param('id') id: string,
+    @Body() updateHeroSlideDto: UpdateHeroSlideDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.heroSectionService.updateSlide(id, updateHeroSlideDto, file);
   }
 
   //@Method DELETE
-  //@desc Remove image from hero section
-  //@Path: /hero-section/image/:id
-  @ApiOperation({ summary: 'Remove image from hero section' })
-  @ApiNotFoundResponse({ description: 'Hero image not found' })
+  //@desc Delete a hero slide
+  //@Path: /hero-section/:id
+  @ApiOperation({ summary: 'Delete a hero slide' })
+  @ApiNotFoundResponse({ description: 'Hero slide not found' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Image removed from hero section successfully.',
+    description: 'Hero slide deleted successfully.',
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  @Delete('image/:id')
-  removeImage(@Param('id') id: string) {
-    return this.heroSectionService.removeImage(id);
+  @Delete(':id')
+  deleteSlide(@Param('id') id: string) {
+    return this.heroSectionService.deleteSlide(id);
   }
 
   //@Method PATCH
-  //@desc Update image display order
-  //@Path: /hero-section/image/:id/order
-  @ApiOperation({ summary: 'Update image display order' })
-  @ApiNotFoundResponse({ description: 'Hero image not found' })
+  //@desc Update slide display order
+  //@Path: /hero-section/:id/order
+  @ApiOperation({ summary: 'Update hero slide display order' })
+  @ApiNotFoundResponse({ description: 'Hero slide not found' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Image order updated successfully.',
+    description: 'Hero slide order updated successfully.',
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  @Patch('image/:id/order')
-  updateImageOrder(
+  @Patch(':id/order')
+  updateSlideOrder(
     @Param('id') id: string,
-    @Body() updateImageOrderDto: UpdateImageOrderDto,
+    @Body('displayOrder') displayOrder: number,
   ) {
-    return this.heroSectionService.updateImageOrder(id, updateImageOrderDto);
+    return this.heroSectionService.updateSlideOrder(id, displayOrder);
   }
 
   //@Method PATCH
-  //@desc Update image active status
-  //@Path: /hero-section/image/:id/active
-  @ApiOperation({ summary: 'Update image active status' })
-  @ApiNotFoundResponse({ description: 'Hero image not found' })
+  //@desc Update slide active status
+  //@Path: /hero-section/:id/active
+  @ApiOperation({ summary: 'Update hero slide active status' })
+  @ApiNotFoundResponse({ description: 'Hero slide not found' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Image active status updated successfully.',
+    description: 'Hero slide active status updated successfully.',
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  @Patch('image/:id/active')
-  updateImageActive(
+  @Patch(':id/active')
+  updateSlideActive(
     @Param('id') id: string,
-    @Body() updateImageActiveDto: UpdateImageActiveDto,
+    @Body('isActive') isActive: boolean,
   ) {
-    return this.heroSectionService.updateImageActive(id, updateImageActiveDto);
+    return this.heroSectionService.updateSlideActive(id, isActive);
   }
 }
