@@ -197,20 +197,14 @@ export class OrderService {
 
       if (recipientEmail) {
         try {
-          await this._emailService.sendOrderEmail({
+          await this._emailService.sendOrderEmail(recipientEmail, {
             ref: order.orderNumber,
-            orderDate: new Date(),
             clientName: customerName,
-            orderBy: customerName || 'Client',
-            deliveryWith: 'Standard',
             items: orderItems.map((item) => ({
               productName: item.productVariant?.size || 'Item',
               quantity: item.quantity,
-              priceUHT: item.price,
               priceTTC: item.price * item.quantity,
-              reference: item.productVariant?.id || '',
             })),
-            totalHT: total,
             totalTTC: total,
           });
         } catch {

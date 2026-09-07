@@ -52,11 +52,11 @@ export class EmailService {
     }
   }
 
-  async sendOrderEmail(data: any) {
+  async sendOrderEmail(to: string, data: any) {
     try {
       await this.mailerService.sendMail({
-        to: 'farouk.abdelkrim@gmail.com',
-        subject: `Nouvelle Commande - N° ${data.ref || '2026/001'} - ${data.clientName}`,
+        to,
+        subject: `Order Confirmation - ${data.ref}`,
         html: getOrderEmailTemplate(data),
       });
     } catch (error) {
