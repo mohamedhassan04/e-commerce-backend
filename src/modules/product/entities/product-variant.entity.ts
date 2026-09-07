@@ -7,6 +7,9 @@ export class ProductVariant extends Node {
   @Column({ name: 'size', type: 'varchar', length: 50 })
   size: string;
 
+  @Column({ name: 'order', type: 'int', default: 0 })
+  order: number;
+
   @Column({ name: 'price', type: 'decimal', precision: 10, scale: 2 })
   price: number;
 

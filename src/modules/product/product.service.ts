@@ -56,12 +56,13 @@ export class ProductService {
       );
 
       if (createProductDto.variants?.length) {
-        const variants = createProductDto.variants.map((v) =>
+        const variants = createProductDto.variants.map((v, index) =>
           queryRunner.manager.create(ProductVariant, {
             size: v.size,
             price: v.price,
             stock: v.stock ?? 0,
             sku: v.sku,
+            order: index,
             product: savedProduct,
           }),
         );
@@ -141,6 +142,7 @@ export class ProductService {
       .skip(skip)
       .take(limit)
       .orderBy('product.createdAt', 'DESC')
+      .addOrderBy('variant.order', 'ASC')
       .getManyAndCount();
 
     const formattedData = formatProductImages(data);
