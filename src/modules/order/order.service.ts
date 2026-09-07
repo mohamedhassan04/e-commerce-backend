@@ -17,6 +17,7 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
 import { generateOrderNumber } from 'src/shared/utils/utils';
+import { EmailService } from 'src/shared/send-mail/mail.service';
 
 @Injectable()
 export class OrderService {
@@ -24,11 +25,32 @@ export class OrderService {
     private readonly _dataSource: DataSource,
     @InjectRepository(Order)
     private readonly _orderRepo: Repository<Order>,
+    private readonly _emailService: EmailService,
   ) {}
 
   // @desc Create a new order
   // @route POST /order
-  async createOrder(createOrderDto: CreateOrderDto, userId: string) {
+  async createOrder(createOrderDto: CreateOrderDto, userId: string | null) {
+    const isGuest = !userId;
+
+    if (isGuest) {
+      if (!createOrderDto.guestEmail) {
+        throw new BadRequestException('Email is required for guest checkout.');
+      }
+      if (!createOrderDto.guestFirstName) {
+        throw new BadRequestException('First name is required for guest checkout.');
+      }
+      if (!createOrderDto.guestLastName) {
+        throw new BadRequestException('Last name is required for guest checkout.');
+      }
+      if (createOrderDto.addressId) {
+        throw new BadRequestException('Guests cannot use saved addresses. Please provide a manualAddress.');
+      }
+      if (createOrderDto.phoneNumberId) {
+        throw new BadRequestException('Guests cannot use saved phone numbers. Please provide a phone number in manualAddress.');
+      }
+    }
+
     if (!createOrderDto.addressId && !createOrderDto.manualAddress) {
       throw new BadRequestException(
         'An address is required. Provide addressId or manualAddress.',
@@ -157,13 +179,44 @@ export class OrderService {
       const order = queryRunner.manager.create(Order, {
         orderNumber: await generateOrderNumber(queryRunner),
         total,
-        user: { id: userId },
+        user: userId ? { id: userId } : null,
+        guestEmail: isGuest ? createOrderDto.guestEmail : null,
+        guestFirstName: isGuest ? createOrderDto.guestFirstName : null,
+        guestLastName: isGuest ? createOrderDto.guestLastName : null,
         items: orderItems,
         shippingAddress,
       });
 
       await queryRunner.manager.save(Order, order);
       await queryRunner.commitTransaction();
+
+      const recipientEmail = isGuest ? createOrderDto.guestEmail : null;
+      const customerName = isGuest
+        ? `${createOrderDto.guestFirstName} ${createOrderDto.guestLastName}`
+        : null;
+
+      if (recipientEmail) {
+        try {
+          await this._emailService.sendOrderEmail({
+            ref: order.orderNumber,
+            orderDate: new Date(),
+            clientName: customerName,
+            orderBy: customerName || 'Client',
+            deliveryWith: 'Standard',
+            items: orderItems.map((item) => ({
+              productName: item.productVariant?.size || 'Item',
+              quantity: item.quantity,
+              priceUHT: item.price,
+              priceTTC: item.price * item.quantity,
+              reference: item.productVariant?.id || '',
+            })),
+            totalHT: total,
+            totalTTC: total,
+          });
+        } catch {
+          // Email failure should not block order creation
+        }
+      }
 
       return {
         message: 'Order placed successfully.',

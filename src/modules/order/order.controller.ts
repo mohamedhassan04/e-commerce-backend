@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -25,20 +26,21 @@ import { GetUser } from 'src/shared/decorators/user.decorator';
 import { Users } from '../users/entities/user.entity';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
+import { Request } from 'express';
 
 @ApiTags('Order')
 @Controller('order')
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
-  @ApiOperation({ summary: 'Place a new order' })
+  @ApiOperation({ summary: 'Place a new order (authenticated or guest)' })
   @ApiBody({ type: CreateOrderDto })
   @ApiResponse({ status: 201, description: 'Order placed successfully.' })
   @ApiResponse({ status: 400, description: 'Insufficient stock.' })
-  @UseGuards(JwtAuthGuard)
   @Post()
-  createOrder(@Body() createOrderDto: CreateOrderDto, @GetUser() user: Users) {
-    return this.orderService.createOrder(createOrderDto, user.id);
+  createOrder(@Body() createOrderDto: CreateOrderDto, @Req() req: Request) {
+    const userId = (req as any)?.user?.id?.id || null;
+    return this.orderService.createOrder(createOrderDto, userId);
   }
 
   @ApiOperation({ summary: 'Get current user orders' })

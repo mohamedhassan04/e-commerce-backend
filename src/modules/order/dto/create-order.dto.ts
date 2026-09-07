@@ -123,4 +123,28 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   phoneNumberId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Guest email (required for guest checkout)',
+    example: 'guest@example.com',
+  })
+  @IsOptional()
+  @IsString()
+  guestEmail?: string;
+
+  @ApiPropertyOptional({
+    description: 'Guest first name (required for guest checkout)',
+    example: 'John',
+  })
+  @IsOptional()
+  @IsString()
+  guestFirstName?: string;
+
+  @ApiPropertyOptional({
+    description: 'Guest last name (required for guest checkout)',
+    example: 'Doe',
+  })
+  @IsOptional()
+  @IsString()
+  guestLastName?: string;
 }
