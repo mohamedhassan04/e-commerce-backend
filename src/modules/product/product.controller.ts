@@ -82,7 +82,7 @@ export class ProductController {
     status: HttpStatus.OK,
     description: 'Product rated successfully.',
   })
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @Patch(':id/rating')
   rateProduct(@Param('id') id: string, @Body() rateProductDto: RateProductDto) {
     return this.productService.rateProduct(id, rateProductDto);
