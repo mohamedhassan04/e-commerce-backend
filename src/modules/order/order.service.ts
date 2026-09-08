@@ -331,6 +331,8 @@ export class OrderService {
   async updateOrderStatus(orderId: string, dto: UpdateOrderStatusDto) {
     const order = await this._orderRepo
       .createQueryBuilder('order')
+      .leftJoin('order.user', 'user')
+      .addSelect(['user.firstName', 'user.lastName', 'user.email'])
       .where('order.id = :orderId', { orderId })
       .getOne();
 
@@ -340,6 +342,23 @@ export class OrderService {
 
     order.status = dto.status;
     await this._orderRepo.save(order);
+
+    const recipientEmail = order.user?.email || order.guestEmail;
+    const customerName = order.user
+      ? `${order.user.firstName} ${order.user.lastName}`
+      : `${order.guestFirstName} ${order.guestLastName}`;
+
+    if (recipientEmail) {
+      try {
+        await this._emailService.sendOrderStatusUpdateEmail(recipientEmail, {
+          ref: order.orderNumber,
+          clientName: customerName,
+          status: dto.status,
+        });
+      } catch {
+        // Email failure should not block status update
+      }
+    }
 
     return {
       message: 'Order status updated successfully.',

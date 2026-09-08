@@ -4,6 +4,7 @@ import { getForgotPasswordTemplate } from './templates/forgot-password.template'
 import { getEmailVerificationTemplate } from './templates/activeAccount';
 import { getEmailWelcomeTemplate } from './templates/welcome-email';
 import { getOrderEmailTemplate } from './templates/order-email';
+import { getOrderStatusUpdateTemplate } from './templates/order-status-update';
 
 @Injectable()
 export class EmailService {
@@ -46,6 +47,21 @@ export class EmailService {
         html: getEmailWelcomeTemplate(name, email, tempPassword),
       });
     } catch (error) {
+      throw new InternalServerErrorException(
+        "Un probleme est survenu lors de l'envoi de l'email",
+      );
+    }
+  }
+
+  async sendOrderStatusUpdateEmail(to: string, data: { ref: string; clientName: string; status: string }) {
+    try {
+      await this.mailerService.sendMail({
+        to,
+        subject: `Order Status Update - ${data.ref}`,
+        html: getOrderStatusUpdateTemplate(data),
+      });
+    } catch (error) {
+      console.log(error);
       throw new InternalServerErrorException(
         "Un probleme est survenu lors de l'envoi de l'email",
       );
