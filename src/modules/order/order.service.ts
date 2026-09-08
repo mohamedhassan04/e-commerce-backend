@@ -137,7 +137,7 @@ export class OrderService {
       for (const item of createOrderDto.items) {
         const variant = await queryRunner.manager
           .createQueryBuilder(ProductVariant, 'variant')
-          .leftJoinAndSelect('variant.product', 'product')
+          .innerJoinAndSelect('variant.product', 'product')
           .setLock('pessimistic_write')
           .where('variant.id = :id', { id: item.productVariantId })
           .getOne();
