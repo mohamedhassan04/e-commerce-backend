@@ -137,6 +137,7 @@ export class OrderService {
       for (const item of createOrderDto.items) {
         const variant = await queryRunner.manager
           .createQueryBuilder(ProductVariant, 'variant')
+          .leftJoinAndSelect('variant.product', 'product')
           .setLock('pessimistic_write')
           .where('variant.id = :id', { id: item.productVariantId })
           .getOne();
@@ -201,7 +202,9 @@ export class OrderService {
             ref: order.orderNumber,
             clientName: customerName,
             items: orderItems.map((item) => ({
-              productName: item.productVariant?.size || 'Item',
+              productName: item.productVariant?.product?.name
+                ? `${item.productVariant.product.name} ${item.productVariant.size || ''}`.trim()
+                : item.productVariant?.size || 'Item',
               quantity: item.quantity,
               priceTTC: item.price * item.quantity,
             })),
