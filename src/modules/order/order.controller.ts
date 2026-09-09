@@ -19,6 +19,7 @@ import {
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { BulkUpdateOrderStatusDto } from './dto/bulk-update-order-status.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
@@ -58,6 +59,18 @@ export class OrderController {
   @Get('all')
   findAllOrders(@Query() query: OrderQueryDto) {
     return this.orderService.findAllOrders(query);
+  }
+
+  @ApiOperation({ summary: 'Bulk update order status (admin)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Orders status updated successfully.',
+  })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Patch('bulk-status')
+  bulkUpdateOrderStatus(@Body() dto: BulkUpdateOrderStatusDto) {
+    return this.orderService.bulkUpdateOrderStatus(dto);
   }
 
   @ApiOperation({ summary: 'Get order by ID' })

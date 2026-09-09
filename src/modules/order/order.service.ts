@@ -14,6 +14,7 @@ import { Address } from 'src/modules/users/entities/address.entity';
 import { PhoneNumber } from 'src/modules/users/entities/phone-number.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { BulkUpdateOrderStatusDto } from './dto/bulk-update-order-status.dto';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
 import { generateOrderNumber } from 'src/shared/utils/utils';
@@ -365,6 +366,51 @@ export class OrderService {
 
     return {
       message: 'Order status updated successfully.',
+      httpStatus: HttpStatus.OK,
+    };
+  }
+
+  // @desc Bulk update order status (admin)
+  // @route PATCH /order/bulk-status
+  async bulkUpdateOrderStatus(dto: BulkUpdateOrderStatusDto) {
+    const orders = await this._orderRepo
+      .createQueryBuilder('order')
+      .leftJoin('order.user', 'user')
+      .addSelect(['user.firstName', 'user.lastName', 'user.email'])
+      .where('order.id IN (:...ids)', { ids: dto.ids })
+      .getMany();
+
+    if (orders.length === 0) {
+      throw new NotFoundException('No orders found with the provided IDs.');
+    }
+
+    for (const order of orders) {
+      order.status = dto.status;
+    }
+
+    await this._orderRepo.save(orders);
+
+    for (const order of orders) {
+      const recipientEmail = order.user?.email || order.guestEmail;
+      const customerName = order.user
+        ? `${order.user.firstName} ${order.user.lastName}`
+        : `${order.guestFirstName} ${order.guestLastName}`;
+
+      if (recipientEmail) {
+        try {
+          await this._emailService.sendOrderStatusUpdateEmail(recipientEmail, {
+            ref: order.orderNumber,
+            clientName: customerName,
+            status: dto.status,
+          });
+        } catch {
+          // Email failure should not block status update
+        }
+      }
+    }
+
+    return {
+      message: `${orders.length} order(s) status updated successfully.`,
       httpStatus: HttpStatus.OK,
     };
   }
