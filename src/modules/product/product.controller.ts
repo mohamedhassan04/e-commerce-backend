@@ -73,6 +73,19 @@ export class ProductController {
     return this.productService.findAllProducts(query);
   }
 
+  //@Method GET
+  //@desc Get popular products (rating 4.0 - 5.0)
+  //@Path: /product/popular
+  @ApiOperation({ summary: 'Get popular products (rating 4.0 - 5.0)' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Popular products retrieved successfully.',
+  })
+  @Get('popular')
+  findPopularProducts() {
+    return this.productService.findPopularProducts();
+  }
+
   //@Method PATCH
   //@desc Rate a product
   //@Path: /product/:id/rating

@@ -197,6 +197,32 @@ export class ProductService {
     };
   }
 
+  async findPopularProducts() {
+    const data = await this._productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.variants', 'variant')
+      .leftJoinAndSelect('product.images', 'image')
+      .leftJoinAndSelect('product.category', 'category')
+      .where('product.rating >= :minRating AND product.rating <= :maxRating', {
+        minRating: 4.0,
+        maxRating: 5.0,
+      })
+      .andWhere('product.isActive = :isActive', { isActive: true })
+      .orderBy('product.rating', 'DESC')
+      .addOrderBy('product.ratingCount', 'DESC')
+      .addOrderBy('variant.order', 'ASC')
+      .take(8)
+      .getMany();
+
+    const formattedData = formatProductImages(data);
+
+    return {
+      message: 'Popular products retrieved successfully.',
+      HttpStatus: HttpStatus.OK,
+      data: formattedData,
+    };
+  }
+
   async removeProduct(id: string) {
     // Find the product by ID in the database
     const product = await this._productRepo.findOne({ where: { id } });
