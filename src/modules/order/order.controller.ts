@@ -21,6 +21,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { BulkUpdateOrderStatusDto } from './dto/bulk-update-order-status.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { GetUser } from 'src/shared/decorators/user.decorator';
@@ -38,6 +39,7 @@ export class OrderController {
   @ApiBody({ type: CreateOrderDto })
   @ApiResponse({ status: 201, description: 'Order placed successfully.' })
   @ApiResponse({ status: 400, description: 'Insufficient stock.' })
+  @UseGuards(OptionalJwtAuthGuard)
   @Post()
   createOrder(@Body() createOrderDto: CreateOrderDto, @Req() req: Request) {
     const userId = (req as any)?.user?.id?.id || null;
