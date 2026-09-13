@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { CreateProductDto } from './dto/create-product.dto';
 import { RateProductDto } from './dto/rate-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
 import { ProductImage } from './entities/product-image.entity';
 import { ProductVariant } from './entities/product-variant.entity';
@@ -91,6 +92,125 @@ export class ProductService {
       await queryRunner.rollbackTransaction();
       throw new InternalServerErrorException(
         'Failed to create product. All changes have been rolled back.',
+      );
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async updateProduct(
+    id: string,
+    updateProductDto: UpdateProductDto,
+    files: Express.Multer.File[],
+    removeImages?: string[],
+    primaryImageId?: string,
+    primaryNewImage?: boolean,
+  ) {
+    const queryRunner = this._dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const product = await queryRunner.manager.findOne(Product, {
+        where: { id },
+        relations: ['variants', 'images'],
+      });
+
+      if (!product) {
+        throw new NotFoundException(`Product with ID "${id}" not found.`);
+      }
+
+      if (updateProductDto.categoryId) {
+        const category = await queryRunner.manager.findOne(Category, {
+          where: { id: updateProductDto.categoryId },
+        });
+        if (!category) {
+          throw new NotFoundException(
+            `Category with ID "${updateProductDto.categoryId}" not found.`,
+          );
+        }
+        product.category = category;
+      }
+
+      if (updateProductDto.name !== undefined) {
+        product.name = updateProductDto.name;
+      }
+      if (updateProductDto.description !== undefined) {
+        product.description = updateProductDto.description;
+      }
+      if (updateProductDto.isActive !== undefined) {
+        product.isActive = updateProductDto.isActive;
+      }
+
+      await queryRunner.manager.save(Product, product);
+
+      if (updateProductDto.variants?.length) {
+        await queryRunner.manager.remove(ProductVariant, product.variants);
+
+        const variants = updateProductDto.variants.map((v, index) =>
+          queryRunner.manager.create(ProductVariant, {
+            size: v.size,
+            price: v.price,
+            stock: v.stock ?? 0,
+            sku: v.sku,
+            order: index,
+            product: product,
+          }),
+        );
+        await queryRunner.manager.save(ProductVariant, variants);
+      }
+
+      if (removeImages?.length) {
+        const imagesToRemove = product.images.filter((img) =>
+          removeImages.includes(img.id),
+        );
+        if (imagesToRemove.length) {
+          await queryRunner.manager.remove(ProductImage, imagesToRemove);
+          product.images = product.images.filter(
+            (img) => !removeImages.includes(img.id),
+          );
+        }
+      }
+
+      if (primaryImageId) {
+        for (const img of product.images) {
+          img.isPrimary = img.id === primaryImageId;
+        }
+        await queryRunner.manager.save(ProductImage, product.images);
+      }
+
+      if (files?.length) {
+        if (primaryNewImage) {
+          for (const img of product.images) {
+            img.isPrimary = false;
+          }
+          await queryRunner.manager.save(ProductImage, product.images);
+        }
+
+        const images = files.map((file, index) =>
+          queryRunner.manager.create(ProductImage, {
+            url: `/uploads/${file.filename}`,
+            alt: file.originalname,
+            isPrimary: primaryNewImage && index === 0,
+            product: product,
+          }),
+        );
+        await queryRunner.manager.save(ProductImage, images);
+      }
+
+      await queryRunner.commitTransaction();
+
+      return {
+        message: 'Product updated successfully.',
+        HttpStatus: HttpStatus.OK,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to update product. All changes have been rolled back.',
       );
     } finally {
       await queryRunner.release();

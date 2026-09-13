@@ -23,6 +23,7 @@ import {
 } from '@nestjs/swagger';
 import { CreateProductSwaggerDto } from './dto/create-product.dto';
 import { RateProductDto } from './dto/rate-product.dto';
+import { UpdateProductSwaggerDto } from './dto/update-product.dto';
 import { ProductService } from './product.service';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -99,6 +100,58 @@ export class ProductController {
   @Patch(':id/rating')
   rateProduct(@Param('id') id: string, @Body() rateProductDto: RateProductDto) {
     return this.productService.rateProduct(id, rateProductDto);
+  }
+
+  //@Method PATCH
+  //@desc Update a product (admin only)
+  //@Path: /product/:id
+  @ApiOperation({ summary: 'Update a product' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UpdateProductSwaggerDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Product updated successfully.',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Product not found.',
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Failed to update product.',
+  })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @UseInterceptors(FilesInterceptor('images', 10, multerConfig))
+  @Patch(':id')
+  updateProduct(
+    @Param('id') id: string,
+    @Body() body: any,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    const removeImages = body.removeImages
+      ? JSON.parse(body.removeImages)
+      : undefined;
+    const primaryImageId = body.primaryImageId || undefined;
+    const primaryNewImage = body.primaryNewImage === 'true';
+
+    const updateDto = {
+      name: body.name,
+      description: body.description || undefined,
+      isActive:
+        body.isActive === 'true' || body.isActive === true ? true : body.isActive === 'false' || body.isActive === false ? false : undefined,
+      categoryId: body.categoryId || undefined,
+      variants: body.variants ? JSON.parse(body.variants) : undefined,
+    };
+
+    return this.productService.updateProduct(
+      id,
+      updateDto,
+      files,
+      removeImages,
+      primaryImageId,
+      primaryNewImage,
+    );
   }
 
   //@Method DELETE
