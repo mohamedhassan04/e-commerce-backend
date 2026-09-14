@@ -145,19 +145,59 @@ export class ProductService {
       await queryRunner.manager.save(Product, product);
 
       if (updateProductDto.variants?.length) {
-        await queryRunner.manager.remove(ProductVariant, product.variants);
+        const incoming = updateProductDto.variants;
+        const existingVariants = [...product.variants];
 
-        const variants = updateProductDto.variants.map((v, index) =>
-          queryRunner.manager.create(ProductVariant, {
-            size: v.size,
-            price: v.price,
-            stock: v.stock ?? 0,
-            sku: v.sku,
-            order: index,
-            product: product,
-          }),
+        const matchedExisting = new Set<string>();
+        const matchedIncoming = new Set<number>();
+
+        for (let i = 0; i < incoming.length; i++) {
+          const v = incoming[i];
+          const match = existingVariants.find(
+            (e) =>
+              !matchedExisting.has(e.id) &&
+              ((e.sku && v.sku && e.sku === v.sku) ||
+                (!e.sku && !v.sku && e.size === v.size)),
+          );
+          if (match) {
+            matchedExisting.add(match.id);
+            matchedIncoming.add(i);
+            match.size = v.size;
+            match.price = v.price;
+            match.stock = v.stock ?? 0;
+            match.sku = v.sku;
+            match.order = i;
+          }
+        }
+
+        const toRemove = existingVariants.filter(
+          (e) => !matchedExisting.has(e.id),
         );
-        await queryRunner.manager.save(ProductVariant, variants);
+        if (toRemove.length) {
+          await queryRunner.manager.remove(ProductVariant, toRemove);
+        }
+
+        for (let i = 0; i < incoming.length; i++) {
+          if (!matchedIncoming.has(i)) {
+            const v = incoming[i];
+            const variant = queryRunner.manager.create(ProductVariant, {
+              size: v.size,
+              price: v.price,
+              stock: v.stock ?? 0,
+              sku: v.sku,
+              order: i,
+              product: product,
+            });
+            await queryRunner.manager.save(ProductVariant, variant);
+          }
+        }
+
+        if (matchedExisting.size > 0) {
+          const toUpdate = existingVariants.filter((e) =>
+            matchedExisting.has(e.id),
+          );
+          await queryRunner.manager.save(ProductVariant, toUpdate);
+        }
       }
 
       if (removeImages?.length) {
