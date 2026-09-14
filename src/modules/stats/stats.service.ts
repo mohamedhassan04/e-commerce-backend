@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Order } from 'src/modules/order/entities/order.entity';
 import { OrderItem } from 'src/modules/order/entities/order-item.entity';
 import { Users } from 'src/modules/users/entities/user.entity';
+import { Product } from 'src/modules/product/entities/product.entity';
 import { StatsRange } from 'src/shared/enum/enum.type';
 
 @Injectable()
@@ -15,6 +16,8 @@ export class StatsService {
     private readonly _orderItemRepo: Repository<OrderItem>,
     @InjectRepository(Users)
     private readonly _userRepo: Repository<Users>,
+    @InjectRepository(Product)
+    private readonly _productRepo: Repository<Product>,
   ) {}
 
   async getDashboardStats(range: StatsRange) {
@@ -22,7 +25,7 @@ export class StatsService {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
 
-    const [revenueResult, orderCount, statusCounts, dailyRevenue, bestSellers, recentOrders, neverViewed, newCustomers] =
+    const [revenueResult, orderCount, statusCounts, dailyRevenue, bestSellers, recentOrders, neverViewed, newCustomers, totalProducts] =
       await Promise.all([
         this._getRevenue(cutoff),
         this._getOrderCount(cutoff),
@@ -32,15 +35,15 @@ export class StatsService {
         this._getRecentOrders(),
         this._getNeverViewed(),
         this._getNewCustomers(cutoff),
+        this._getTotalProducts(),
       ]);
 
     const activeOrders = orderCount - statusCounts.filter((s) => s.status === 'CANCELLED').reduce((a, s) => a + s.count, 0);
-    const avgOrderValue = activeOrders > 0 ? revenueResult / activeOrders : 0;
 
     return {
       revenue: Number(revenueResult) || 0,
       orderCount: activeOrders,
-      avgOrderValue: Math.round(avgOrderValue),
+      totalProducts,
       newCustomers,
       neverViewed,
       dailyRevenue,
@@ -165,5 +168,9 @@ export class StatsService {
       .andWhere("u.role != 'ADMIN'")
       .getRawOne();
     return Number(result?.count ?? 0);
+  }
+
+  private async _getTotalProducts(): Promise<number> {
+    return this._productRepo.count();
   }
 }
