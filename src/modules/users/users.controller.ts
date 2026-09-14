@@ -5,6 +5,7 @@ import {
   Param,
   Put,
   Patch,
+  Delete,
   Post,
   UseGuards,
   Query,
@@ -19,6 +20,8 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyAccountDto } from './dto/verify-account.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
@@ -155,6 +158,41 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('USER')
   changePassword(@Body() dto: ChangePasswordDto, @GetUser() user: Users) {
-    return this.usersService.changePassword(user.id, dto.oldPassword, dto.newPassword);
+    return this.usersService.changePassword(
+      user.id,
+      dto.oldPassword,
+      dto.newPassword,
+    );
+  }
+
+  //@Method PATCH
+  //@desc Update profile (firstName, lastName) for connected user
+  //@Path: /users/me/profile
+  @ApiOperation({ summary: 'Update profile for connected user' })
+  @Patch('me/profile')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('USER')
+  updateProfile(@Body() dto: UpdateProfileDto, @GetUser() user: Users) {
+    return this.usersService.updateProfile(user.id, dto);
+  }
+
+  //@Method DELETE
+  //@desc Delete own account (orders are preserved)
+  //@Path: /users/me
+  @ApiOperation({ summary: 'Delete own account' })
+  @Delete('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('USER')
+  deleteAccount(@Body() dto: DeleteAccountDto, @GetUser() user: Users) {
+    return this.usersService.deleteAccount(user.id, dto);
+  }
+
+  //@Method GET
+  //@desc Get a user by id
+  //@Path: /users/:id
+  @ApiOperation({ summary: 'Get One User' })
+  @Get(':id')
+  findOneUser(@Param('id') id: string) {
+    return this.usersService.findUserById(id);
   }
 }

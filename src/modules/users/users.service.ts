@@ -19,6 +19,8 @@ import { PhoneNumber } from './entities/phone-number.entity';
 import { generateResetCode } from 'src/shared/utils/utils';
 import { EmailService } from 'src/shared/send-mail/mail.service';
 import { UserQueryDto } from 'src/shared/dto/pagination-query.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 
 @Injectable()
 export class UsersService {
@@ -376,6 +378,45 @@ export class UsersService {
 
     return {
       message: 'Mot de passe changé avec succés.',
+      HttpStatus: HttpStatus.OK,
+    };
+  }
+
+  // @desc Update profile (firstName, lastName) for connected user
+  // @route PATCH /users/me/profile
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this._userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé.');
+    }
+
+    user.firstName = dto.firstName;
+    user.lastName = dto.lastName;
+    await this._userRepo.save(user);
+
+    return {
+      message: 'Profil mis à jour avec succés.',
+      HttpStatus: HttpStatus.OK,
+    };
+  }
+
+  // @desc Delete own account (hard delete; orders preserved via SET NULL)
+  // @route DELETE /users/me
+  async deleteAccount(userId: string, dto: DeleteAccountDto) {
+    const user = await this._userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé.');
+    }
+
+    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Mot de passe incorrect.');
+    }
+
+    await this._userRepo.remove(user);
+
+    return {
+      message: 'Compte supprimé avec succés.',
       HttpStatus: HttpStatus.OK,
     };
   }
