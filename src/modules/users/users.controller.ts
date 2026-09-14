@@ -35,9 +35,9 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   //@Method GET
-  //@desc Get all users for admin (only USER role)
+  //@desc Get all users for admin (only ADMIN role)
   //@Path: /users/admin/all
-  @ApiOperation({ summary: 'Get all users for admin (USER role only)' })
+  @ApiOperation({ summary: 'Get all users for admin (ADMIN role only)' })
   @Get('admin/all')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -191,6 +191,8 @@ export class UsersController {
   //@desc Get a user by id
   //@Path: /users/:id
   @ApiOperation({ summary: 'Get One User' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('USER')
   @Get(':id')
   findOneUser(@Param('id') id: string) {
     return this.usersService.findUserById(id);
