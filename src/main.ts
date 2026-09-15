@@ -9,6 +9,7 @@ import createDatabaseIfNotExists from './config/create-database';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { setupSwagger } from './shared/swagger/setup';
+import { ThrottleExceptionFilter } from './shared/filters/throttle-exception.filter';
 import { configService as config } from './config/config.service';
 import { join } from 'path';
 
@@ -75,6 +76,9 @@ async function bootstrap() {
 
   // swagger
   setupSwagger(app, config.swaggerConfig);
+
+  // global exception filters
+  app.useGlobalFilters(new ThrottleExceptionFilter());
 
   // start server
   await app.listen(port);

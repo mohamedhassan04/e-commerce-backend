@@ -47,7 +47,7 @@ class ConfigService {
    * Loads values from `.env` with safe parsing and default fallbacks
    */
   public getThrottlerConfig(): ThrottlerModuleOptions {
-    const ttl = parseInt(this.getValue('THROTTLER_TTL', false) || '60', 10);
+    const ttl = parseInt(this.getValue('THROTTLER_TTL', false) || '60000', 10);
     const limit = parseInt(
       this.getValue('THROTTLER_LIMIT', false) || '100',
       10,
