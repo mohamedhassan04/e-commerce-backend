@@ -12,10 +12,10 @@ import { AuthenticationService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response as Res } from 'express';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LoginUserDto } from '../users/dto/login-user.dto';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { ConfigService } from '@nestjs/config';
+import { OptionalJwtAuthGuard } from './guards/optional-jwt-auth.guard';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -98,13 +98,9 @@ export class AuthenticationController {
   @ApiOperation({ summary: 'Current user' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Current User Successfully.',
+    description: 'Returns the current user, or null for an anonymous visitor.',
   })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
-  })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('current')
   async current(@Request() req: any) {
     return {
