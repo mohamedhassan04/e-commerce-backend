@@ -1,13 +1,12 @@
 import { Options } from 'multer';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { v4 as uuid } from 'uuid';
 
 export const multerConfig: Options = {
   storage: diskStorage({
     destination: './uploads',
     filename: (req, file, cb) => {
-      const uniqueName = `${uuid()}${extname(file.originalname)}`;
+      const uniqueName = `${uuid()}.webp`;
       cb(null, uniqueName);
     },
   }),

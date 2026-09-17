@@ -12,6 +12,7 @@ import { HeroSlide } from './entities/hero-slide.entity';
 import { CreateHeroSlideDto } from './dto/create-hero-slide.dto';
 import { UpdateHeroSlideDto } from './dto/update-hero-slide.dto';
 import { formatImageUrl } from 'src/shared/utils/utils';
+import { processHeroImage } from 'src/shared/sharp/image-processing';
 
 @Injectable()
 export class HeroSectionService {
@@ -66,7 +67,12 @@ export class HeroSectionService {
 
     try {
       const count = await queryRunner.manager.count(HeroSlide);
-      const imageUrl = file ? `/uploads/${file.filename}` : null;
+
+      let imageUrl: string | null = null;
+      if (file) {
+        await processHeroImage(file.path);
+        imageUrl = `/uploads/${file.filename}`;
+      }
 
       const slide = queryRunner.manager.create(HeroSlide, {
         ...createHeroSlideDto,
@@ -119,6 +125,7 @@ export class HeroSectionService {
             unlinkSync(oldPath);
           }
         }
+        await processHeroImage(file.path);
         slide.imageUrl = `/uploads/${file.filename}`;
       }
 

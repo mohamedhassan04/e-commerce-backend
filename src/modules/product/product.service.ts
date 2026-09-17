@@ -15,6 +15,7 @@ import { ProductVariant } from './entities/product-variant.entity';
 import { Category } from 'src/modules/category/entities/category.entity';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { formatProductImages } from 'src/shared/utils/utils';
+import { processProductImage } from 'src/shared/sharp/image-processing';
 
 @Injectable()
 export class ProductService {
@@ -71,6 +72,8 @@ export class ProductService {
       }
 
       if (files?.length) {
+        await Promise.all(files.map((file) => processProductImage(file.path)));
+
         const images = files.map((file, index) =>
           queryRunner.manager.create(ProductImage, {
             url: `/uploads/${file.filename}`,
@@ -226,6 +229,8 @@ export class ProductService {
           }
           await queryRunner.manager.save(ProductImage, product.images);
         }
+
+        await Promise.all(files.map((file) => processProductImage(file.path)));
 
         const images = files.map((file, index) =>
           queryRunner.manager.create(ProductImage, {
