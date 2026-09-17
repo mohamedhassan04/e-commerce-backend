@@ -120,7 +120,7 @@ export class HeroSectionService {
 
       if (file) {
         if (slide.imageUrl) {
-          const oldPath = join(__dirname, '..', '..', slide.imageUrl);
+          const oldPath = join(process.cwd(), slide.imageUrl);
           if (existsSync(oldPath)) {
             unlinkSync(oldPath);
           }
@@ -167,7 +167,7 @@ export class HeroSectionService {
       }
 
       if (slide.imageUrl) {
-        const filePath = join(__dirname, '..', '..', slide.imageUrl);
+        const filePath = join(process.cwd(), slide.imageUrl);
         if (existsSync(filePath)) {
           unlinkSync(filePath);
         }

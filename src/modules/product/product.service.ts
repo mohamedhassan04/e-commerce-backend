@@ -14,6 +14,8 @@ import { ProductImage } from './entities/product-image.entity';
 import { ProductVariant } from './entities/product-variant.entity';
 import { Category } from 'src/modules/category/entities/category.entity';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
+import { existsSync, unlinkSync } from 'fs';
+import { join } from 'path';
 import { formatProductImages } from 'src/shared/utils/utils';
 import { processProductImage } from 'src/shared/sharp/image-processing';
 
@@ -208,6 +210,12 @@ export class ProductService {
           removeImages.includes(img.id),
         );
         if (imagesToRemove.length) {
+          for (const image of imagesToRemove) {
+            const filePath = join(process.cwd(), image.url);
+            if (existsSync(filePath)) {
+              unlinkSync(filePath);
+            }
+          }
           await queryRunner.manager.remove(ProductImage, imagesToRemove);
           product.images = product.images.filter(
             (img) => !removeImages.includes(img.id),
@@ -389,16 +397,24 @@ export class ProductService {
   }
 
   async removeProduct(id: string) {
-    // Find the product by ID in the database
-    const product = await this._productRepo.findOne({ where: { id } });
+    const product = await this._productRepo.findOne({
+      where: { id },
+      relations: ['images'],
+    });
 
-    // If product doesn't exist, throw a 404 error
     if (!product) {
       throw new NotFoundException(`Product with ID "${id}" not found.`);
     }
 
-    // Delete the product from the database
-    // Related variants and images are auto-deleted via ON DELETE CASCADE
+    if (product.images?.length) {
+      for (const image of product.images) {
+        const filePath = join(__dirname, '..', '..', image.url);
+        if (existsSync(filePath)) {
+          unlinkSync(filePath);
+        }
+      }
+    }
+
     await this._productRepo.remove(product);
 
     return {
