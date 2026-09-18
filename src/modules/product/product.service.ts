@@ -408,7 +408,7 @@ export class ProductService {
 
     if (product.images?.length) {
       for (const image of product.images) {
-        const filePath = join(__dirname, '..', '..', image.url);
+        const filePath = join(process.cwd(), image.url);
         if (existsSync(filePath)) {
           unlinkSync(filePath);
         }
