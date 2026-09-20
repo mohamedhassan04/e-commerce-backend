@@ -279,6 +279,64 @@ export class ProductService {
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.variants', 'variant')
       .leftJoinAndSelect('product.images', 'image')
+      .leftJoinAndSelect('product.category', 'category')
+      .andWhere('product.isActive = :isActive', { isActive: true });
+
+    if (query.search) {
+      qb.andWhere('product.name ILIKE :search', {
+        search: `%${query.search}%`,
+      });
+    }
+
+    if (query.minPrice) {
+      qb.andWhere('variant.price >= :minPrice', {
+        minPrice: Number(query.minPrice),
+      });
+    }
+
+    if (query.maxPrice) {
+      qb.andWhere('variant.price <= :maxPrice', {
+        maxPrice: Number(query.maxPrice),
+      });
+    }
+
+    if (query.categoryId) {
+      qb.andWhere('category.id = :categoryId', {
+        categoryId: query.categoryId,
+      });
+    }
+
+    const [data, total] = await qb
+      .skip(skip)
+      .take(limit)
+      .orderBy('product.createdAt', 'DESC')
+      .addOrderBy('variant.order', 'ASC')
+      .getManyAndCount();
+
+    const formattedData = formatProductImages(data);
+
+    return {
+      message: 'Products retrieved successfully.',
+      HttpStatus: HttpStatus.OK,
+      data: formattedData,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async findAllProductsAdmin(query: ProductQueryDto) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const qb = this._productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.variants', 'variant')
+      .leftJoinAndSelect('product.images', 'image')
       .leftJoinAndSelect('product.category', 'category');
 
     if (query.search) {

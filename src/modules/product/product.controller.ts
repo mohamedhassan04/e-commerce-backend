@@ -62,9 +62,9 @@ export class ProductController {
   }
 
   //@Method GET
-  //@desc Get all products
+  //@desc Get active products (public)
   //@Path: /all
-  @ApiOperation({ summary: 'Get all products' })
+  @ApiOperation({ summary: 'Get active products' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Products retrieved successfully.',
@@ -72,6 +72,21 @@ export class ProductController {
   @Get('all')
   findAll(@Query() query: ProductQueryDto) {
     return this.productService.findAllProducts(query);
+  }
+
+  //@Method GET
+  //@desc Get all products including inactive (admin only)
+  //@Path: /admin/all
+  @ApiOperation({ summary: 'Get all products (admin)' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Products retrieved successfully.',
+  })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('admin/all')
+  findAllAdmin(@Query() query: ProductQueryDto) {
+    return this.productService.findAllProductsAdmin(query);
   }
 
   //@Method GET
