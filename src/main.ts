@@ -58,7 +58,6 @@ async function bootstrap() {
     prefix: '/uploads',
     setHeaders: (res) => {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-      res.setHeader('Access-Control-Allow-Origin', '*');
     },
   });
 

@@ -90,10 +90,10 @@ export class UsersService {
       where: { id: id },
       relations: ['addresses', 'phoneNumbers'],
     });
-    delete user.password;
     if (!user) {
       throw new NotFoundException('Utilisateur non trouvé.');
     }
+    delete user.password;
 
     return user;
   }
@@ -299,24 +299,20 @@ export class UsersService {
   // @route POST /users/forgot-password
   async forgotPassword(email: string) {
     const user = await this._userRepo.findOne({ where: { email } });
-    if (!user) {
-      throw new NotFoundException(
-        'Aucun compte associé à cette adresse email.',
-      );
+    if (user) {
+      const resetCode = generateResetCode(10);
+      const expiry = new Date();
+      expiry.setMinutes(expiry.getMinutes() + 30);
+
+      user.resetPasswordCode = resetCode;
+      user.resetPasswordCodeExpiry = expiry;
+      await this._userRepo.save(user);
+
+      await this.emailService.sendEmailForgotPassword(email, resetCode);
     }
 
-    const resetCode = generateResetCode(10);
-    const expiry = new Date();
-    expiry.setMinutes(expiry.getMinutes() + 30);
-
-    user.resetPasswordCode = resetCode;
-    user.resetPasswordCodeExpiry = expiry;
-    await this._userRepo.save(user);
-
-    await this.emailService.sendEmailForgotPassword(email, resetCode);
-
     return {
-      message: 'Code de réinitialisation envoyé avec succés.',
+      message: 'Si un compte est associé à cette adresse email, un code de réinitialisation a été envoyé.',
       HttpStatus: HttpStatus.OK,
     };
   }
