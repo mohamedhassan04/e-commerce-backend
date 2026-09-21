@@ -41,7 +41,7 @@ export class UsersService {
         throw new ConflictException('Cette adresse email est deja utilisée.');
       }
 
-      const salt = await bcrypt.genSalt(10);
+      const salt = await bcrypt.genSalt(12);
       const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
 
       const user = this._userRepo.create({
@@ -345,7 +345,7 @@ export class UsersService {
       );
     }
 
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     user.password = hashedPassword;
@@ -376,7 +376,7 @@ export class UsersService {
       throw new BadRequestException('Ancien mot de passe incorrect.');
     }
 
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     user.password = hashedPassword;
