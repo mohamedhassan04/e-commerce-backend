@@ -182,8 +182,8 @@ export class UsersController {
   //@desc Get a user by id
   //@Path: /users/:id
   @ApiOperation({ summary: 'Get One User' })
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles('USER')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('USER')
   @Get(':id')
   findOneUser(@Param('id') id: string) {
     return this.usersService.findUserById(id);
