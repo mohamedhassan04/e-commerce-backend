@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { ProductImage } from './product-image.entity';
 import { ProductVariant } from './product-variant.entity';
+import { ProductRating } from './product-rating.entity';
 import { Category } from 'src/modules/category/entities/category.entity';
 
 @Entity('tb_products')
@@ -46,4 +47,7 @@ export class Product extends Node {
 
   @OneToMany(() => ProductImage, (image) => image.product)
   images: ProductImage[];
+
+  @OneToMany(() => ProductRating, (rating) => rating.product)
+  ratings: ProductRating[];
 }

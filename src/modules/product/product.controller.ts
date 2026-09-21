@@ -28,8 +28,10 @@ import { ProductService } from './product.service';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
+import { GetUser } from 'src/shared/decorators/user.decorator';
 import { multerConfig } from 'src/shared/multer/multer.config';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
+import { Users } from '../users/entities/user.entity';
 
 @ApiTags('Product')
 @Controller('product')
@@ -103,7 +105,7 @@ export class ProductController {
   }
 
   //@Method PATCH
-  //@desc Rate a product
+  //@desc Rate a product (authenticated users only)
   //@Path: /product/:id/rating
   @ApiOperation({ summary: 'Rate a product' })
   @ApiNotFoundResponse({ description: 'Product not found' })
@@ -111,10 +113,15 @@ export class ProductController {
     status: HttpStatus.OK,
     description: 'Product rated successfully.',
   })
-  // @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('USER')
   @Patch(':id/rating')
-  rateProduct(@Param('id') id: string, @Body() rateProductDto: RateProductDto) {
-    return this.productService.rateProduct(id, rateProductDto);
+  rateProduct(
+    @Param('id') id: string,
+    @Body() rateProductDto: RateProductDto,
+    @GetUser() user: Users,
+  ) {
+    return this.productService.rateProduct(id, rateProductDto, user);
   }
 
   //@Method PATCH
@@ -154,7 +161,11 @@ export class ProductController {
       name: body.name,
       description: body.description || undefined,
       isActive:
-        body.isActive === 'true' || body.isActive === true ? true : body.isActive === 'false' || body.isActive === false ? false : undefined,
+        body.isActive === 'true' || body.isActive === true
+          ? true
+          : body.isActive === 'false' || body.isActive === false
+            ? false
+            : undefined,
       categoryId: body.categoryId || undefined,
       variants: body.variants ? JSON.parse(body.variants) : undefined,
     };

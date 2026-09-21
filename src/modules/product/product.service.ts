@@ -12,12 +12,14 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
 import { ProductImage } from './entities/product-image.entity';
 import { ProductVariant } from './entities/product-variant.entity';
+import { ProductRating } from './entities/product-rating.entity';
 import { Category } from 'src/modules/category/entities/category.entity';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { formatProductImages } from 'src/shared/utils/utils';
 import { processProductImage } from 'src/shared/sharp/image-processing';
+import { Users } from '../users/entities/user.entity';
 
 @Injectable()
 export class ProductService {
@@ -25,6 +27,8 @@ export class ProductService {
     private readonly _dataSource: DataSource,
     @InjectRepository(Product)
     private readonly _productRepo: Repository<Product>,
+    @InjectRepository(ProductRating)
+    private readonly _ratingRepo: Repository<ProductRating>,
   ) {}
 
   async createProduct(
@@ -280,6 +284,14 @@ export class ProductService {
       .leftJoinAndSelect('product.variants', 'variant')
       .leftJoinAndSelect('product.images', 'image')
       .leftJoinAndSelect('product.category', 'category')
+      .addSelect(
+        'COALESCE((SELECT AVG(r.rating) FROM tb_product_ratings r WHERE r.product_id = product.id), 0)',
+        '_avg_rating',
+      )
+      .addSelect(
+        'COALESCE((SELECT COUNT(*) FROM tb_product_ratings r WHERE r.product_id = product.id), 0)',
+        '_rating_count',
+      )
       .andWhere('product.isActive = :isActive', { isActive: true });
 
     if (query.search) {
@@ -306,12 +318,47 @@ export class ProductService {
       });
     }
 
-    const [data, total] = await qb
+    const raw = await qb
       .skip(skip)
       .take(limit)
       .orderBy('product.createdAt', 'DESC')
       .addOrderBy('variant.order', 'ASC')
-      .getManyAndCount();
+      .getRawAndEntities();
+
+    const countQb = this._productRepo
+      .createQueryBuilder('product')
+      .leftJoin('product.variants', 'variant')
+      .leftJoin('product.category', 'category')
+      .andWhere('product.isActive = :isActive', { isActive: true });
+
+    if (query.search) {
+      countQb.andWhere('product.name ILIKE :search', {
+        search: `%${query.search}%`,
+      });
+    }
+    if (query.minPrice) {
+      countQb.andWhere('variant.price >= :minPrice', {
+        minPrice: Number(query.minPrice),
+      });
+    }
+    if (query.maxPrice) {
+      countQb.andWhere('variant.price <= :maxPrice', {
+        maxPrice: Number(query.maxPrice),
+      });
+    }
+    if (query.categoryId) {
+      countQb.andWhere('category.id = :categoryId', {
+        categoryId: query.categoryId,
+      });
+    }
+
+    const total = await countQb.getCount();
+
+    const data = raw.entities.map((product, i) => ({
+      ...product,
+      rating: Number(raw.raw[i]?._avg_rating ?? 0),
+      ratingCount: Number(raw.raw[i]?._rating_count ?? 0),
+    }));
 
     const formattedData = formatProductImages(data);
 
@@ -337,7 +384,15 @@ export class ProductService {
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.variants', 'variant')
       .leftJoinAndSelect('product.images', 'image')
-      .leftJoinAndSelect('product.category', 'category');
+      .leftJoinAndSelect('product.category', 'category')
+      .addSelect(
+        'COALESCE((SELECT AVG(r.rating) FROM tb_product_ratings r WHERE r.product_id = product.id), 0)',
+        '_avg_rating',
+      )
+      .addSelect(
+        'COALESCE((SELECT COUNT(*) FROM tb_product_ratings r WHERE r.product_id = product.id), 0)',
+        '_rating_count',
+      );
 
     if (query.search) {
       qb.andWhere('product.name ILIKE :search', {
@@ -369,12 +424,51 @@ export class ProductService {
       });
     }
 
-    const [data, total] = await qb
+    const raw = await qb
       .skip(skip)
       .take(limit)
       .orderBy('product.createdAt', 'DESC')
       .addOrderBy('variant.order', 'ASC')
-      .getManyAndCount();
+      .getRawAndEntities();
+
+    const countQb = this._productRepo
+      .createQueryBuilder('product')
+      .leftJoin('product.variants', 'variant')
+      .leftJoin('product.category', 'category');
+
+    if (query.search) {
+      countQb.andWhere('product.name ILIKE :search', {
+        search: `%${query.search}%`,
+      });
+    }
+    if (query.isActive !== undefined) {
+      countQb.andWhere('product.isActive = :isActive', {
+        isActive: query.isActive,
+      });
+    }
+    if (query.minPrice) {
+      countQb.andWhere('variant.price >= :minPrice', {
+        minPrice: Number(query.minPrice),
+      });
+    }
+    if (query.maxPrice) {
+      countQb.andWhere('variant.price <= :maxPrice', {
+        maxPrice: Number(query.maxPrice),
+      });
+    }
+    if (query.categoryId) {
+      countQb.andWhere('category.id = :categoryId', {
+        categoryId: query.categoryId,
+      });
+    }
+
+    const total = await countQb.getCount();
+
+    const data = raw.entities.map((product, i) => ({
+      ...product,
+      rating: Number(raw.raw[i]?._avg_rating ?? 0),
+      ratingCount: Number(raw.raw[i]?._rating_count ?? 0),
+    }));
 
     const formattedData = formatProductImages(data);
 
@@ -391,36 +485,43 @@ export class ProductService {
     };
   }
 
-  async rateProduct(id: string, rateProductDto: RateProductDto) {
-    // Find the product by ID in the database
+  async rateProduct(id: string, rateProductDto: RateProductDto, user: Users) {
     const product = await this._productRepo.findOne({ where: { id } });
-
-    // If product doesn't exist, throw a 404 error
     if (!product) {
       throw new NotFoundException(`Product with ID "${id}" not found.`);
     }
 
-    // Increment the total number of ratings by 1
-    // e.g. if product was rated by 3 users before, now it's 4
-    const newRatingCount = product.ratingCount + 1;
+    const existingRating = await this._ratingRepo.findOne({
+      where: { product: { id }, user: { id: user.id } },
+    });
 
-    // Calculate the sum of all previous ratings
-    // e.g. if current avg is 4.00 and ratingCount is 3 => total sum = 4.00 * 3 = 12.00
-    const currentTotal = product.rating * product.ratingCount;
+    if (existingRating) {
+      const currentTotal = product.rating * product.ratingCount;
+      const oldSum = Number(existingRating.rating);
+      const newSum = currentTotal - oldSum + rateProductDto.rating;
+      const newRating = newSum / product.ratingCount;
 
-    // Calculate new weighted average: (old sum + new rating) / new total count
-    // e.g. (12.00 + 5) / 4 = 4.25
-    const newRating = (currentTotal + rateProductDto.rating) / newRatingCount;
+      existingRating.rating = rateProductDto.rating;
+      await this._ratingRepo.save(existingRating);
 
-    // Round to 2 decimal places and store
-    // e.g. 4.25333... => 4.25
-    product.rating = Math.round(newRating * 100) / 100;
+      product.rating = Math.round(newRating * 100) / 100;
+      await this._productRepo.save(product);
+    } else {
+      const newRatingCount = product.ratingCount + 1;
+      const currentTotal = product.rating * product.ratingCount;
+      const newRating = (currentTotal + rateProductDto.rating) / newRatingCount;
 
-    // Update the rating count
-    product.ratingCount = newRatingCount;
+      const rating = this._ratingRepo.create({
+        rating: rateProductDto.rating,
+        product,
+        user: { id: user.id },
+      });
+      await this._ratingRepo.save(rating);
 
-    // Save the updated product to the database
-    await this._productRepo.save(product);
+      product.rating = Math.round(newRating * 100) / 100;
+      product.ratingCount = newRatingCount;
+      await this._productRepo.save(product);
+    }
 
     return {
       message: 'Product rated successfully.',
@@ -434,18 +535,32 @@ export class ProductService {
       .leftJoinAndSelect('product.variants', 'variant')
       .leftJoinAndSelect('product.images', 'image')
       .leftJoinAndSelect('product.category', 'category')
-      .where('product.rating >= :minRating AND product.rating <= :maxRating', {
-        minRating: 4.0,
-        maxRating: 5.0,
-      })
+      .addSelect(
+        'COALESCE((SELECT AVG(r.rating) FROM tb_product_ratings r WHERE r.product_id = product.id), 0)',
+        '_avg_rating',
+      )
+      .addSelect(
+        'COALESCE((SELECT COUNT(*) FROM tb_product_ratings r WHERE r.product_id = product.id), 0)',
+        '_rating_count',
+      )
+      .andWhere(
+        `COALESCE((SELECT AVG(r.rating) FROM tb_product_ratings r WHERE r.product_id = product.id), 0) >= :minRating`,
+        { minRating: 4.0 },
+      )
       .andWhere('product.isActive = :isActive', { isActive: true })
-      .orderBy('product.rating', 'DESC')
-      .addOrderBy('product.ratingCount', 'DESC')
+      .orderBy('_avg_rating', 'DESC')
+      .addOrderBy('_rating_count', 'DESC')
       .addOrderBy('variant.order', 'ASC')
       .take(8)
-      .getMany();
+      .getRawAndEntities();
 
-    const formattedData = formatProductImages(data);
+    const products = data.entities.map((product, i) => ({
+      ...product,
+      rating: Number(data.raw[i]?._avg_rating ?? 0),
+      ratingCount: Number(data.raw[i]?._rating_count ?? 0),
+    }));
+
+    const formattedData = formatProductImages(products);
 
     return {
       message: 'Popular products retrieved successfully.',
