@@ -86,10 +86,16 @@ export class UsersService {
   // @desc Get a user by ID
   // @route GET /users/:id
   async findUserById(id: string) {
-    return await this._userRepo.findOne({
+    const user = await this._userRepo.findOne({
       where: { id: id },
       relations: ['addresses', 'phoneNumbers'],
     });
+    delete user.password;
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé.');
+    }
+
+    return user;
   }
 
   // @desc Get addresses and phone numbers of connected user

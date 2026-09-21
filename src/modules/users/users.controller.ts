@@ -46,15 +46,6 @@ export class UsersController {
   }
 
   //@Method GET
-  //@desc Get a user by email
-  //@Path: /users/get-user-by-email
-  @ApiOperation({ summary: 'Get One User' })
-  @Get('get-user-by-email')
-  findOne(@Query('email') email: string) {
-    return this.usersService.findOneUser(email);
-  }
-
-  //@Method GET
   //@desc Get addresses and phone numbers of connected user
   //@Path: /users/me/addresses-and-phones
   @ApiOperation({ summary: 'Get addresses and phone numbers of current user' })
@@ -191,8 +182,8 @@ export class UsersController {
   //@desc Get a user by id
   //@Path: /users/:id
   @ApiOperation({ summary: 'Get One User' })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('USER')
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles('USER')
   @Get(':id')
   findOneUser(@Param('id') id: string) {
     return this.usersService.findUserById(id);

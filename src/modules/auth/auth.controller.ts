@@ -16,6 +16,7 @@ import { LoginUserDto } from '../users/dto/login-user.dto';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { ConfigService } from '@nestjs/config';
 import { OptionalJwtAuthGuard } from './guards/optional-jwt-auth.guard';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -39,6 +40,7 @@ export class AuthenticationController {
   })
   @ApiBody({ type: LoginUserDto })
   @UseGuards(LocalAuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 per minute for login
   @Post('login')
   async login(
     @Request() req,
@@ -87,6 +89,7 @@ export class AuthenticationController {
     description: 'Invalid input data.',
   })
   @ApiBody({ type: CreateUserDto })
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 per minute for register
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
     return await this.authService.register(createUserDto);
@@ -121,7 +124,11 @@ export class AuthenticationController {
   })
   @Post('logout')
   async logout(@Response() res: Res) {
-    res.clearCookie('access_token');
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: this.configService.get<string>('NODE_ENV') === 'production',
+      sameSite: 'lax',
+    });
     res.status(HttpStatus.OK).json({
       success: true,
       message: 'Logged out successfully',
