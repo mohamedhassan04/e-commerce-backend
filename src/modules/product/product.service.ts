@@ -31,6 +31,36 @@ export class ProductService {
     private readonly _ratingRepo: Repository<ProductRating>,
   ) {}
 
+  /**
+   * Joins with variants/images multiply the raw rows (one per joined row),
+   * so raw[i] does not line up with entities[i]. Ratings must be keyed by
+   * product id instead of by index.
+   */
+  private attachRatings<T extends { id: string }>(
+    products: T[],
+    rawRows: Record<string, unknown>[],
+  ): Array<T & { rating: number; ratingCount: number }> {
+    const ratings = new Map<string, { rating: number; ratingCount: number }>();
+
+    for (const row of rawRows) {
+      const productId = row.product_id as string | undefined;
+      if (!productId || ratings.has(productId)) continue;
+      ratings.set(productId, {
+        rating: Number(row._avg_rating ?? 0),
+        ratingCount: Number(row._rating_count ?? 0),
+      });
+    }
+
+    return products.map((product) => {
+      const entry = ratings.get(product.id);
+      return {
+        ...product,
+        rating: entry?.rating ?? 0,
+        ratingCount: entry?.ratingCount ?? 0,
+      };
+    });
+  }
+
   async createProduct(
     createProductDto: CreateProductDto,
     files: Express.Multer.File[],
@@ -354,11 +384,7 @@ export class ProductService {
 
     const total = await countQb.getCount();
 
-    const data = raw.entities.map((product, i) => ({
-      ...product,
-      rating: Number(raw.raw[i]?._avg_rating ?? 0),
-      ratingCount: Number(raw.raw[i]?._rating_count ?? 0),
-    }));
+    const data = this.attachRatings(raw.entities, raw.raw);
 
     const formattedData = formatProductImages(data);
 
@@ -464,11 +490,7 @@ export class ProductService {
 
     const total = await countQb.getCount();
 
-    const data = raw.entities.map((product, i) => ({
-      ...product,
-      rating: Number(raw.raw[i]?._avg_rating ?? 0),
-      ratingCount: Number(raw.raw[i]?._rating_count ?? 0),
-    }));
+    const data = this.attachRatings(raw.entities, raw.raw);
 
     const formattedData = formatProductImages(data);
 
@@ -496,32 +518,27 @@ export class ProductService {
     });
 
     if (existingRating) {
-      const currentTotal = product.rating * product.ratingCount;
-      const oldSum = Number(existingRating.rating);
-      const newSum = currentTotal - oldSum + rateProductDto.rating;
-      const newRating = newSum / product.ratingCount;
-
       existingRating.rating = rateProductDto.rating;
       await this._ratingRepo.save(existingRating);
-
-      product.rating = Math.round(newRating * 100) / 100;
-      await this._productRepo.save(product);
     } else {
-      const newRatingCount = product.ratingCount + 1;
-      const currentTotal = product.rating * product.ratingCount;
-      const newRating = (currentTotal + rateProductDto.rating) / newRatingCount;
-
       const rating = this._ratingRepo.create({
         rating: rateProductDto.rating,
         product,
         user: { id: user.id },
       });
       await this._ratingRepo.save(rating);
-
-      product.rating = Math.round(newRating * 100) / 100;
-      product.ratingCount = newRatingCount;
-      await this._productRepo.save(product);
     }
+
+    const stats = await this._ratingRepo
+      .createQueryBuilder('r')
+      .select('AVG(r.rating)', 'avg')
+      .addSelect('COUNT(*)', 'count')
+      .where('r.product_id = :id', { id })
+      .getRawOne<{ avg: string | null; count: string }>();
+
+    product.rating = Math.round(Number(stats?.avg ?? 0) * 100) / 100;
+    product.ratingCount = Number(stats?.count ?? 0);
+    await this._productRepo.save(product);
 
     return {
       message: 'Product rated successfully.',
@@ -554,11 +571,7 @@ export class ProductService {
       .take(8)
       .getRawAndEntities();
 
-    const products = data.entities.map((product, i) => ({
-      ...product,
-      rating: Number(data.raw[i]?._avg_rating ?? 0),
-      ratingCount: Number(data.raw[i]?._rating_count ?? 0),
-    }));
+    const products = this.attachRatings(data.entities, data.raw);
 
     const formattedData = formatProductImages(products);
 
