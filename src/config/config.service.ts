@@ -92,9 +92,7 @@ class ConfigService {
       migrationsRun: true, // Run migrations automatically
 
       // Enable SSL in production environment
-      ssl: {
-  rejectUnauthorized: false, // Required for cloud databases like Neon
-}
+      ssl: false,
       extra: {
         connectionLimit: 10,
         connectTimeout: 10000,
