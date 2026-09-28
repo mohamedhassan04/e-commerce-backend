@@ -3,6 +3,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { ThrottlerModuleOptions } from '@nestjs/throttler';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ISwaggerConfigInterface } from 'src/shared/swagger/swagger-config.interface';
+import { postgresSslOptions } from './postgres-ssl';
 
 // Load environment variables from a .env file
 require('dotenv').config();
@@ -91,10 +92,10 @@ class ConfigService {
       synchronize: true,
       migrationsRun: true, // Run migrations automatically
 
-      // Enable SSL in production environment
-      ssl: {
-        rejectUnauthorized: false, // Required for cloud databases like Neon
-      },
+      // TLS is used when the server supports it - cloud databases such as
+      // Render or Neon refuse plain-text connections, local servers often
+      // have no SSL at all (detected by create-database.ts on startup)
+      ssl: postgresSslOptions(),
       extra: {
         connectionLimit: 10,
         connectTimeout: 10000,
