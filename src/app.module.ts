@@ -13,11 +13,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
       isGlobal: true, // Makes the config available globally
       envFilePath: '.env', // Specify the .env file path
     }),
-    TypeOrmModule.forRootAsync({
-      // Resolved when the module initializes, i.e. after the database
-      // connection has been probed for TLS support in main.ts
-      useFactory: () => configService.getTypeOrmConfig(),
-    }),
+    TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
     MailerModule.forRoot(configService.smtpEmailConfig()),
     ThrottlerModule.forRoot(configService.getThrottlerConfig()),
     ...AllModules,

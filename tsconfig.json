@@ -14,9 +14,6 @@
     "baseUrl": "./",
     "rootDir": "./src",
     "incremental": true,
-    // Kept inside dist so nest's deleteOutDir removes it together with the
-    // compiled output - a stale build-info file makes tsc skip emitting
-    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo",
     "skipLibCheck": true,
     "strictNullChecks": false,
     "noImplicitAny": false,

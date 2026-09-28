@@ -1,36 +1,29 @@
 import { ConfigService } from '@nestjs/config';
-import { ClientConfig } from 'pg';
-import { connectToPostgres } from './postgres-ssl';
+import { Client } from 'pg';
 
 async function createDatabaseIfNotExists() {
   const configService = new ConfigService();
 
-  const databaseName = configService.get<string>('POSTGRES_DATABASE');
-  const connectionOptions: ClientConfig = {
+  const client = new Client({
     host: configService.get<string>('POSTGRES_HOST'),
     port: parseInt(configService.get<string>('POSTGRES_PORT')),
     user: configService.get<string>('POSTGRES_USER'),
     password: configService.get<string>('POSTGRES_PASSWORD'),
-  };
+  });
+  const databaseName = configService.get<string>('POSTGRES_DATABASE');
 
-  // Connecting to the configured database tells us whether it already exists.
   try {
-    const client = await connectToPostgres({
-      ...connectionOptions,
-      database: databaseName,
-    });
-    await client.end();
-    return;
-  } catch (error) {
-    // 3D000 = database does not exist, anything else is a real failure
-    if ((error as { code?: string }).code !== '3D000') {
-      throw error;
+    await client.connect();
+    const result = await client.query(
+      `SELECT 1 FROM pg_database WHERE datname = $1`,
+      [databaseName],
+    );
+
+    if (result.rowCount === 0) {
+      await client.query(`CREATE DATABASE "${databaseName}"`);
+    } else {
+      return;
     }
-  }
-
-  const client = await connectToPostgres(connectionOptions);
-  try {
-    await client.query(`CREATE DATABASE "${databaseName}"`);
   } finally {
     await client.end();
   }
