@@ -93,8 +93,8 @@ class ConfigService {
 
       // Enable SSL in production environment
       ssl: {
-        rejectUnauthorized: false, // Required for cloud databases like Neon
-      },
+  rejectUnauthorized: false, // Required for cloud databases like Neon
+}
       extra: {
         connectionLimit: 10,
         connectTimeout: 10000,
