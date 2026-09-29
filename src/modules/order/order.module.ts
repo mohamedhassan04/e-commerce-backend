@@ -6,6 +6,7 @@ import { OrderShippingAddress } from './entities/order-shipping-address.entity';
 import { OrderController } from './order.controller';
 import { OrderService } from './order.service';
 import { SendMailModule } from 'src/shared/send-mail/send-mail.module';
+import { OrderEmailListener } from './order-email.listener';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { SendMailModule } from 'src/shared/send-mail/send-mail.module';
     SendMailModule,
   ],
   controllers: [OrderController],
-  providers: [OrderService],
+  providers: [OrderService, OrderEmailListener],
   exports: [OrderService],
 })
 export class OrderModule {}

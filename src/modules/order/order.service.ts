@@ -2,8 +2,10 @@ import {
   BadRequestException,
   HttpStatus,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
@@ -18,15 +20,18 @@ import { BulkUpdateOrderStatusDto } from './dto/bulk-update-order-status.dto';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
 import { generateOrderNumber } from 'src/shared/utils/utils';
-import { EmailService } from 'src/shared/send-mail/mail.service';
+import { OrderCreatedEvent } from './events/order-created.event';
+import { OrderStatusUpdatedEvent } from './events/order-status-updated.event';
 
 @Injectable()
 export class OrderService {
+  private readonly logger = new Logger(OrderService.name);
+
   constructor(
     private readonly _dataSource: DataSource,
     @InjectRepository(Order)
     private readonly _orderRepo: Repository<Order>,
-    private readonly _emailService: EmailService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // @desc Create a new order
@@ -85,6 +90,7 @@ export class OrderService {
     const queryRunner = this._dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
+    let orderCreatedEvent: OrderCreatedEvent | null = null;
 
     try {
       let street: string;
@@ -190,16 +196,16 @@ export class OrderService {
       });
 
       await queryRunner.manager.save(Order, order);
-      await queryRunner.commitTransaction();
-
       const recipientEmail = isGuest ? createOrderDto.guestEmail : null;
       const customerName = isGuest
         ? `${createOrderDto.guestFirstName} ${createOrderDto.guestLastName}`
         : null;
 
       if (recipientEmail) {
-        try {
-          await this._emailService.sendOrderEmail(recipientEmail, {
+        orderCreatedEvent = new OrderCreatedEvent(
+          order.id,
+          recipientEmail,
+          {
             ref: order.orderNumber,
             clientName: customerName,
             items: orderItems.map((item) => ({
@@ -210,22 +216,32 @@ export class OrderService {
               priceTTC: item.price * item.quantity,
             })),
             totalTTC: total,
-          });
-        } catch {
-          // Email failure should not block order creation
-        }
+          },
+        );
       }
-
-      return {
-        message: 'Order placed successfully.',
-        HttpStatus: HttpStatus.CREATED,
-      };
+      await queryRunner.commitTransaction();
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
     } finally {
       await queryRunner.release();
     }
+
+    if (orderCreatedEvent) {
+      try {
+        this.eventEmitter.emit('order.created', orderCreatedEvent);
+      } catch (error) {
+        this.logger.error(
+          `Failed to dispatch order confirmation email for order ${orderCreatedEvent.orderId}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
+    }
+
+    return {
+      message: 'Order placed successfully.',
+      HttpStatus: HttpStatus.CREATED,
+    };
   }
 
   // @desc Get user orders with pagination
@@ -346,23 +362,7 @@ export class OrderService {
 
     order.status = dto.status;
     await this._orderRepo.save(order);
-
-    const recipientEmail = order.user?.email || order.guestEmail;
-    const customerName = order.user
-      ? `${order.user.firstName} ${order.user.lastName}`
-      : `${order.guestFirstName} ${order.guestLastName}`;
-
-    if (recipientEmail) {
-      try {
-        await this._emailService.sendOrderStatusUpdateEmail(recipientEmail, {
-          ref: order.orderNumber,
-          clientName: customerName,
-          status: dto.status,
-        });
-      } catch {
-        // Email failure should not block status update
-      }
-    }
+    this.emitOrderStatusUpdated(order);
 
     return {
       message: 'Order status updated successfully.',
@@ -391,28 +391,38 @@ export class OrderService {
     await this._orderRepo.save(orders);
 
     for (const order of orders) {
-      const recipientEmail = order.user?.email || order.guestEmail;
-      const customerName = order.user
-        ? `${order.user.firstName} ${order.user.lastName}`
-        : `${order.guestFirstName} ${order.guestLastName}`;
-
-      if (recipientEmail) {
-        try {
-          await this._emailService.sendOrderStatusUpdateEmail(recipientEmail, {
-            ref: order.orderNumber,
-            clientName: customerName,
-            status: dto.status,
-          });
-        } catch {
-          // Email failure should not block status update
-        }
-      }
+      this.emitOrderStatusUpdated(order);
     }
 
     return {
       message: `${orders.length} order(s) status updated successfully.`,
       httpStatus: HttpStatus.OK,
     };
+  }
+
+  private emitOrderStatusUpdated(order: Order): void {
+    const recipientEmail = order.user?.email || order.guestEmail;
+    if (!recipientEmail) return;
+
+    const customerName = order.user
+      ? `${order.user.firstName} ${order.user.lastName}`
+      : `${order.guestFirstName} ${order.guestLastName}`;
+
+    try {
+      this.eventEmitter.emit(
+        'order.status.updated',
+        new OrderStatusUpdatedEvent(order.id, recipientEmail, {
+          ref: order.orderNumber,
+          clientName: customerName,
+          status: order.status,
+        }),
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to dispatch order status update email for order ${order.id}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   // @desc Cancel pending order

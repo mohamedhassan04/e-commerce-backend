@@ -14,11 +14,13 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: '#d9534f',
 };
 
-export function getOrderStatusUpdateTemplate(data: {
+export interface OrderStatusUpdateEmailData {
   ref: string;
   clientName: string;
   status: string;
-}) {
+}
+
+export function getOrderStatusUpdateTemplate(data: OrderStatusUpdateEmailData) {
   const statusLabel = STATUS_LABELS[data.status] || data.status;
   const statusColor = STATUS_COLORS[data.status] || '#333';
 

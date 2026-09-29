@@ -1,9 +1,16 @@
 import { formatPrice } from 'src/shared/utils/utils';
 
-export function getOrderEmailTemplate(data: any) {
+export interface OrderEmailData {
+  ref: string;
+  clientName: string;
+  items: { productName: string; quantity: number; priceTTC: number }[];
+  totalTTC: number;
+}
+
+export function getOrderEmailTemplate(data: OrderEmailData) {
   const itemRows = (data.items || [])
     .map(
-      (item: any) => `
+      (item) => `
       <tr>
         <td style="padding:10px 12px;border-bottom:1px solid #eee;font-weight:600;">${item.productName}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;">${item.quantity}</td>

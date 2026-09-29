@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
     }),
     TypeOrmModule.forRoot(configService.getTypeOrmConfig()),
     MailerModule.forRoot(configService.smtpEmailConfig()),
+    EventEmitterModule.forRoot(),
     ThrottlerModule.forRoot(configService.getThrottlerConfig()),
     ...AllModules,
   ],

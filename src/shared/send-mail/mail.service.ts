@@ -3,8 +3,11 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { getForgotPasswordTemplate } from './templates/forgot-password.template';
 import { getEmailVerificationTemplate } from './templates/activeAccount';
 import { getEmailWelcomeTemplate } from './templates/welcome-email';
-import { getOrderEmailTemplate } from './templates/order-email';
-import { getOrderStatusUpdateTemplate } from './templates/order-status-update';
+import { getOrderEmailTemplate, OrderEmailData } from './templates/order-email';
+import {
+  getOrderStatusUpdateTemplate,
+  OrderStatusUpdateEmailData,
+} from './templates/order-status-update';
 
 @Injectable()
 export class EmailService {
@@ -53,33 +56,22 @@ export class EmailService {
     }
   }
 
-  async sendOrderStatusUpdateEmail(to: string, data: { ref: string; clientName: string; status: string }) {
-    try {
-      await this.mailerService.sendMail({
-        to,
-        subject: `Order Status Update - ${data.ref}`,
-        html: getOrderStatusUpdateTemplate(data),
-      });
-    } catch (error) {
-      console.log(error);
-      throw new InternalServerErrorException(
-        "Un probleme est survenu lors de l'envoi de l'email",
-      );
-    }
+  async sendOrderStatusUpdateEmail(
+    to: string,
+    data: OrderStatusUpdateEmailData,
+  ) {
+    await this.mailerService.sendMail({
+      to,
+      subject: `Order Status Update - ${data.ref}`,
+      html: getOrderStatusUpdateTemplate(data),
+    });
   }
 
-  async sendOrderEmail(to: string, data: any) {
-    try {
-      await this.mailerService.sendMail({
-        to,
-        subject: `Order Confirmation - ${data.ref}`,
-        html: getOrderEmailTemplate(data),
-      });
-    } catch (error) {
-      console.log(error);
-      throw new InternalServerErrorException(
-        "Un probleme est survenu lors de l'envoi de l'email",
-      );
-    }
+  async sendOrderEmail(to: string, data: OrderEmailData) {
+    await this.mailerService.sendMail({
+      to,
+      subject: `Order Confirmation - ${data.ref}`,
+      html: getOrderEmailTemplate(data),
+    });
   }
 }
