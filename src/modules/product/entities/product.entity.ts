@@ -36,6 +36,16 @@ export class Product extends Node {
   @Column({ name: 'rating_count', type: 'int', default: 0 })
   ratingCount: number;
 
+  @Column({
+    name: 'discount_percent',
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    default: 0,
+    nullable: true,
+  })
+  discountPercent: number;
+
   @ManyToOne(() => Category, (category) => category.products, {
     onDelete: 'SET NULL',
   })

@@ -4,9 +4,12 @@ import {
   IsArray,
   IsBoolean,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { CreateProductVariantDto } from './create-product-variant.dto';
@@ -51,6 +54,24 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   categoryId?: string;
+
+  @ApiPropertyOptional({
+    type: 'number',
+    example: 20,
+    minimum: 0,
+    maximum: 100,
+    description: 'Discount percentage applied to the product price (0-100)',
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    return Number(value);
+  })
+  discountPercent?: number;
 
   @ApiPropertyOptional({
     type: [CreateProductVariantDto],

@@ -89,6 +89,7 @@ export class ProductService {
           name: createProductDto.name,
           description: createProductDto.description,
           isActive: createProductDto.isActive ?? true,
+          discountPercent: createProductDto.discountPercent ?? 0,
           category: category,
         }),
       );
@@ -179,6 +180,9 @@ export class ProductService {
       }
       if (updateProductDto.isActive !== undefined) {
         product.isActive = updateProductDto.isActive;
+      }
+      if (updateProductDto.discountPercent !== undefined) {
+        product.discountPercent = updateProductDto.discountPercent;
       }
 
       await queryRunner.manager.save(Product, product);

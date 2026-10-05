@@ -167,6 +167,10 @@ export class ProductController {
             ? false
             : undefined,
       categoryId: body.categoryId || undefined,
+      discountPercent:
+        body.discountPercent !== undefined && body.discountPercent !== ''
+          ? Number(body.discountPercent)
+          : undefined,
       variants: body.variants ? JSON.parse(body.variants) : undefined,
     };
 
