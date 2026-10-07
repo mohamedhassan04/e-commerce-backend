@@ -11,6 +11,16 @@ export class OrderItem extends Node {
   @Column({ name: 'price', type: 'decimal', precision: 10, scale: 2 })
   price: number;
 
+  // Unit price before the product discount was applied (null when not discounted)
+  @Column({
+    name: 'original_price',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  originalPrice: number | null;
+
   @ManyToOne(() => ProductVariant, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'product_variant_id' })
   productVariant: ProductVariant;

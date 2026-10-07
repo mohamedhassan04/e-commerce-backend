@@ -19,7 +19,7 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { BulkUpdateOrderStatusDto } from './dto/bulk-update-order-status.dto';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
-import { generateOrderNumber } from 'src/shared/utils/utils';
+import { generateOrderNumber, applyDiscount } from 'src/shared/utils/utils';
 import { OrderCreatedEvent } from './events/order-created.event';
 import { OrderStatusUpdatedEvent } from './events/order-status-updated.event';
 
@@ -164,16 +164,24 @@ export class OrderService {
         variant.stock -= item.quantity;
         await queryRunner.manager.save(ProductVariant, variant);
 
-        const itemTotal = variant.price * item.quantity;
+        const originalPrice = Number(variant.price) || 0;
+        const unitPrice = applyDiscount(
+          originalPrice,
+          variant.product?.discountPercent,
+        );
+        const itemTotal = unitPrice * item.quantity;
         total += itemTotal;
 
         const orderItem = queryRunner.manager.create(OrderItem, {
           quantity: item.quantity,
-          price: variant.price,
+          price: unitPrice,
+          originalPrice: unitPrice < originalPrice ? originalPrice : null,
           productVariant: variant,
         });
         orderItems.push(orderItem);
       }
+
+      total = Math.round(total * 100) / 100;
 
       const shippingAddress = queryRunner.manager.create(OrderShippingAddress, {
         street,
@@ -202,22 +210,34 @@ export class OrderService {
         : null;
 
       if (recipientEmail) {
-        orderCreatedEvent = new OrderCreatedEvent(
-          order.id,
-          recipientEmail,
-          {
-            ref: order.orderNumber,
-            clientName: customerName,
-            items: orderItems.map((item) => ({
-              productName: item.productVariant?.product?.name
-                ? `${item.productVariant.product.name} ${item.productVariant.size || ''}`.trim()
-                : item.productVariant?.size || 'Item',
-              quantity: item.quantity,
-              priceTTC: item.price * item.quantity,
-            })),
-            totalTTC: total,
-          },
-        );
+        let savings = 0;
+        const emailItems = orderItems.map((item) => {
+          const unit = Number(item.price) || 0;
+          const originalUnit =
+            item.originalPrice != null ? Number(item.originalPrice) : 0;
+          const hasSaving = originalUnit > unit;
+          if (hasSaving) {
+            savings += (originalUnit - unit) * item.quantity;
+          }
+          return {
+            productName: item.productVariant?.product?.name
+              ? `${item.productVariant.product.name} ${item.productVariant.size || ''}`.trim()
+              : item.productVariant?.size || 'Item',
+            quantity: item.quantity,
+            priceTTC: Math.round(unit * item.quantity * 100) / 100,
+            originalPriceTTC: hasSaving
+              ? Math.round(originalUnit * item.quantity * 100) / 100
+              : null,
+          };
+        });
+
+        orderCreatedEvent = new OrderCreatedEvent(order.id, recipientEmail, {
+          ref: order.orderNumber,
+          clientName: customerName,
+          items: emailItems,
+          totalTTC: total,
+          savings: Math.round(savings * 100) / 100,
+        });
       }
       await queryRunner.commitTransaction();
     } catch (error) {

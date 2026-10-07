@@ -48,6 +48,16 @@ export const generateResetCode = (length = 10): string => {
     .join('');
 };
 
+export function applyDiscount(
+  price: number | string | null | undefined,
+  discountPercent?: number | string | null,
+): number {
+  const base = Number(price ?? 0) || 0;
+  const discount = Number(discountPercent ?? 0);
+  if (!(discount > 0 && discount <= 100)) return base;
+  return Math.round(base * (1 - discount / 100) * 100) / 100;
+}
+
 export function formatPrice(value: any): string {
   const numericValue = parseFloat(value);
   if (isNaN(numericValue)) {

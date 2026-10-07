@@ -3,21 +3,48 @@ import { formatPrice } from 'src/shared/utils/utils';
 export interface OrderEmailData {
   ref: string;
   clientName: string;
-  items: { productName: string; quantity: number; priceTTC: number }[];
+  items: {
+    productName: string;
+    quantity: number;
+    priceTTC: number;
+    originalPriceTTC?: number | null;
+  }[];
   totalTTC: number;
+  savings?: number;
 }
 
 export function getOrderEmailTemplate(data: OrderEmailData) {
   const itemRows = (data.items || [])
-    .map(
-      (item) => `
+    .map((item) => {
+      const original = item.originalPriceTTC;
+      const totalCell =
+        original != null && Number(original) > Number(item.priceTTC)
+          ? `<span style="color:#999;text-decoration:line-through;font-weight:400;">${formatPrice(original)}</span><br/>${formatPrice(item.priceTTC)}`
+          : formatPrice(item.priceTTC);
+
+      return `
       <tr>
         <td style="padding:10px 12px;border-bottom:1px solid #eee;font-weight:600;">${item.productName}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;">${item.quantity}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;">${formatPrice(item.priceTTC)}</td>
-      </tr>`,
-    )
+        <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;">${totalCell}</td>
+      </tr>`;
+    })
     .join('');
+
+  const savings =
+    data.savings != null && Number(data.savings) > 0 ? Number(data.savings) : 0;
+
+  const savingsRow = savings
+    ? `
+              <tr>
+                <td colspan="2" style="padding:12px 0 0;font-size:14px;color:#2e7d32;font-weight:600;">
+                  Discount applied
+                </td>
+                <td style="padding:12px 0 0;text-align:right;font-size:14px;color:#2e7d32;font-weight:700;">
+                  -${formatPrice(savings)}
+                </td>
+              </tr>`
+    : '';
 
   return `
 <!DOCTYPE html>
@@ -63,6 +90,7 @@ export function getOrderEmailTemplate(data: OrderEmailData) {
               </table>
 
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:20px;">
+                ${savingsRow}
                 <tr>
                   <td style="padding:12px 0;border-top:2px solid #1a1a2e;font-size:16px;font-weight:700;color:#1a1a2e;">
                     Total
