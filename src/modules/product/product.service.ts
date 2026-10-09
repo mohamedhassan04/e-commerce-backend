@@ -217,7 +217,7 @@ export class ProductService {
           (e) => !matchedExisting.has(e.id),
         );
         if (toRemove.length) {
-          await queryRunner.manager.remove(ProductVariant, toRemove);
+          await queryRunner.manager.softRemove(ProductVariant, toRemove);
         }
 
         for (let i = 0; i < incoming.length; i++) {
@@ -605,7 +605,7 @@ export class ProductService {
       }
     }
 
-    await this._productRepo.remove(product);
+    await this._productRepo.softRemove(product);
 
     return {
       message: 'Product deleted successfully.',

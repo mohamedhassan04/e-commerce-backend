@@ -273,6 +273,7 @@ export class OrderService {
 
     const qb = this._orderRepo
       .createQueryBuilder('order')
+      .withDeleted()
       .leftJoinAndSelect('order.items', 'items')
       .leftJoin('items.productVariant', 'productVariant')
       .addSelect(['productVariant.id', 'productVariant.size'])
@@ -307,6 +308,7 @@ export class OrderService {
 
     const qb = this._orderRepo
       .createQueryBuilder('order')
+      .withDeleted()
       .leftJoinAndSelect('order.items', 'items')
       .leftJoin('items.productVariant', 'productVariant')
       .addSelect(['productVariant.id', 'productVariant.size'])
@@ -347,6 +349,7 @@ export class OrderService {
   async findOrderById(orderId: string) {
     const order = await this._orderRepo
       .createQueryBuilder('order')
+      .withDeleted()
       .leftJoinAndSelect('order.items', 'items')
       .leftJoinAndSelect('items.productVariant', 'productVariant')
       .leftJoinAndSelect('productVariant.product', 'product')
@@ -450,6 +453,7 @@ export class OrderService {
   async cancelOrder(orderId: string, userId: string) {
     const order = await this._orderRepo
       .createQueryBuilder('order')
+      .withDeleted()
       .leftJoinAndSelect('order.items', 'items')
       .leftJoinAndSelect('items.productVariant', 'productVariant')
       .where('order.id = :orderId', { orderId })
@@ -472,6 +476,7 @@ export class OrderService {
       for (const item of order.items) {
         const variant = await queryRunner.manager
           .createQueryBuilder(ProductVariant, 'variant')
+          .withDeleted()
           .setLock('pessimistic_write')
           .where('variant.id = :id', { id: item.productVariant.id })
           .getOne();

@@ -1,8 +1,19 @@
 import { Node } from 'src/shared/node/common.entity';
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import {
+  Column,
+  DeleteDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+} from 'typeorm';
 import { Product } from './product.entity';
 
 @Entity('tb_product_variants')
+@Index('UQ_tb_product_variants_sku', ['sku'], {
+  unique: true,
+  where: 'deleted_at IS NULL',
+})
 export class ProductVariant extends Node {
   @Column({ name: 'size', type: 'varchar', length: 50 })
   size: string;
@@ -16,11 +27,13 @@ export class ProductVariant extends Node {
   @Column({ name: 'stock', type: 'int', default: 0 })
   stock: number;
 
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp', nullable: true })
+  deletedAt: Date | null;
+
   @Column({
     name: 'sku',
     type: 'varchar',
     length: 100,
-    unique: true,
     nullable: true,
   })
   sku: string;

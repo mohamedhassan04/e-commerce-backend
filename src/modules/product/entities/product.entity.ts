@@ -1,6 +1,7 @@
 import { Node } from 'src/shared/node/common.entity';
 import {
   Column,
+  DeleteDateColumn,
   Entity,
   Index,
   JoinColumn,
@@ -23,6 +24,9 @@ export class Product extends Node {
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp', nullable: true })
+  deletedAt: Date | null;
 
   @Column({
     name: 'rating',
