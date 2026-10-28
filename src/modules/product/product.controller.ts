@@ -57,9 +57,14 @@ export class ProductController {
   @UseInterceptors(FilesInterceptor('images', 10, multerConfig))
   @Post()
   createProduct(
-    @Body() createProductDto: CreateProductSwaggerDto,
+    @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
   ) {
+    const createProductDto = {
+      ...body,
+      translations: body.translations ? JSON.parse(body.translations) : undefined,
+      variants: body.variants ? JSON.parse(body.variants) : undefined,
+    };
     return this.productService.createProduct(createProductDto, files);
   }
 
@@ -172,6 +177,7 @@ export class ProductController {
           ? Number(body.discountPercent)
           : undefined,
       variants: body.variants ? JSON.parse(body.variants) : undefined,
+      translations: body.translations ? JSON.parse(body.translations) : undefined,
     };
 
     return this.productService.updateProduct(

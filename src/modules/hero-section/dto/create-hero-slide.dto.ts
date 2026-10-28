@@ -1,7 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsNotEmpty, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ContentTranslations, parseTranslations } from 'src/shared/utils/translations';
 
 export class CreateHeroSlideDto {
+  @IsOptional()
+  @Transform(({ value }) => parseTranslations(value))
+  @IsObject()
+  translations?: ContentTranslations;
   @ApiProperty({
     type: 'string',
     example: 'Summer harvest · Fresh-pressed',

@@ -14,6 +14,9 @@ import { CreatePromoPopupDto } from './dto/create-promo-popup.dto';
 import { UpdatePromoPopupDto } from './dto/update-promo-popup.dto';
 import { formatImageUrl } from 'src/shared/utils/utils';
 import { processHeroImage } from 'src/shared/sharp/image-processing';
+import { parseTranslations } from 'src/shared/utils/translations';
+import { ContentTranslationService } from 'src/shared/node/content-translation.service';
+import { ContentTranslation } from 'src/shared/node/content-translation.entity';
 
 @Injectable()
 export class PromoPopupService {
@@ -21,9 +24,10 @@ export class PromoPopupService {
     @InjectRepository(PromoPopup)
     private readonly _promoRepo: Repository<PromoPopup>,
     private readonly _dataSource: DataSource,
+    private readonly _translationService: ContentTranslationService,
   ) {}
 
-  private format(promo: PromoPopup | null) {
+  private format(promo: (PromoPopup & { translations?: Record<string, Record<string, string | null>> }) | null) {
     return promo
       ? {
           ...promo,
@@ -37,11 +41,12 @@ export class PromoPopupService {
       where: { isActive: true },
       order: { createdAt: 'ASC' },
     });
+    const [translated] = await this._translationService.attach('promo-popup', promo ? [promo] : []);
 
     return {
       message: 'Promo popup retrieved successfully.',
       HttpStatus: HttpStatus.OK,
-      data: this.format(promo),
+      data: this.format(translated ?? null),
     };
   }
 
@@ -50,11 +55,12 @@ export class PromoPopupService {
       order: { createdAt: 'ASC' },
       take: 1,
     });
+    const [translated] = await this._translationService.attach('promo-popup', promo ? [promo] : []);
 
     return {
       message: 'Promo popup retrieved successfully.',
       HttpStatus: HttpStatus.OK,
-      data: this.format(promo),
+      data: this.format(translated ?? null),
     };
   }
 
@@ -111,6 +117,10 @@ export class PromoPopupService {
       }
 
       await queryRunner.manager.save(PromoPopup, promo);
+      await this._translationService.save(
+        'promo-popup', promo.id, parseTranslations(createPromoPopupDto.translations) ?? {},
+        queryRunner.manager.getRepository(ContentTranslation),
+      );
       await queryRunner.commitTransaction();
 
       return {
@@ -175,6 +185,10 @@ export class PromoPopupService {
       }
 
       await queryRunner.manager.save(PromoPopup, promo);
+      await this._translationService.save(
+        'promo-popup', promo.id, parseTranslations(updatePromoPopupDto.translations),
+        queryRunner.manager.getRepository(ContentTranslation),
+      );
       await queryRunner.commitTransaction();
 
       return {
@@ -217,6 +231,7 @@ export class PromoPopupService {
       }
 
       await queryRunner.manager.remove(PromoPopup, promo);
+      await queryRunner.manager.getRepository(ContentTranslation).delete({ contentType: 'promo-popup', contentId: promo.id });
       await queryRunner.commitTransaction();
 
       return {

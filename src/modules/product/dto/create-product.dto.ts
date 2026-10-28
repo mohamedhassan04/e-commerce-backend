@@ -5,6 +5,7 @@ import {
   IsBoolean,
   IsNotEmpty,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   Max,
@@ -14,8 +15,14 @@ import {
 } from 'class-validator';
 import { CreateProductVariantDto } from './create-product-variant.dto';
 import { CreateProductImageDto } from './create-product-image.dto';
+import { parseTranslations } from 'src/shared/utils/translations';
 
 export class CreateProductDto {
+  @ApiPropertyOptional({ type: 'object', additionalProperties: true, description: 'Czech and English product text' })
+  @IsOptional()
+  @Transform(({ value }) => parseTranslations(value))
+  @IsObject()
+  translations?: { cz?: { name?: string; description?: string }; en?: { name?: string; description?: string } };
   @ApiProperty({
     type: 'string',
     example: 'Classic Running Shoes',

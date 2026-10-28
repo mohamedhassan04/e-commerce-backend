@@ -14,6 +14,9 @@ import { CreatePromoSectionDto } from './dto/create-promo-section.dto';
 import { UpdatePromoSectionDto } from './dto/update-promo-section.dto';
 import { formatImageUrl } from 'src/shared/utils/utils';
 import { processHeroImage } from 'src/shared/sharp/image-processing';
+import { parseTranslations } from 'src/shared/utils/translations';
+import { ContentTranslationService } from 'src/shared/node/content-translation.service';
+import { ContentTranslation } from 'src/shared/node/content-translation.entity';
 
 @Injectable()
 export class PromoSectionService {
@@ -21,9 +24,10 @@ export class PromoSectionService {
     @InjectRepository(PromoSection)
     private readonly _promoRepo: Repository<PromoSection>,
     private readonly _dataSource: DataSource,
+    private readonly _translationService: ContentTranslationService,
   ) {}
 
-  private format(section: PromoSection | null) {
+  private format(section: (PromoSection & { translations?: Record<string, Record<string, string | null>> }) | null) {
     return section
       ? {
           ...section,
@@ -50,10 +54,11 @@ export class PromoSectionService {
       take: 1,
     });
 
+    const translated = await this._translationService.attach('promo-section', section ? [section] : []);
     return {
       message: 'Promo section retrieved successfully.',
       HttpStatus: HttpStatus.OK,
-      data: this.format(section ?? null),
+      data: this.format(translated[0] ?? null),
     };
   }
 
@@ -63,10 +68,11 @@ export class PromoSectionService {
       take: 1,
     });
 
+    const translated = await this._translationService.attach('promo-section', section ? [section] : []);
     return {
       message: 'Promo section retrieved successfully.',
       HttpStatus: HttpStatus.OK,
-      data: this.format(section ?? null),
+      data: this.format(translated[0] ?? null),
     };
   }
 
@@ -130,6 +136,10 @@ export class PromoSectionService {
       }
 
       await queryRunner.manager.save(PromoSection, section);
+      await this._translationService.save(
+        'promo-section', section.id, parseTranslations(createPromoSectionDto.translations) ?? {},
+        queryRunner.manager.getRepository(ContentTranslation),
+      );
       await queryRunner.commitTransaction();
 
       return {
@@ -201,6 +211,10 @@ export class PromoSectionService {
       }
 
       await queryRunner.manager.save(PromoSection, section);
+      await this._translationService.save(
+        'promo-section', section.id, parseTranslations(updatePromoSectionDto.translations),
+        queryRunner.manager.getRepository(ContentTranslation),
+      );
       await queryRunner.commitTransaction();
 
       return {
@@ -243,6 +257,7 @@ export class PromoSectionService {
       }
 
       await queryRunner.manager.remove(PromoSection, section);
+      await queryRunner.manager.getRepository(ContentTranslation).delete({ contentType: 'promo-section', contentId: section.id });
       await queryRunner.commitTransaction();
 
       return {

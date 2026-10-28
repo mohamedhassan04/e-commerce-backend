@@ -1,8 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreatePromoSectionDto {
+  @IsOptional()
+  @Transform(({ value }) => {
+    try { return typeof value === 'string' ? JSON.parse(value) : value; } catch { return undefined; }
+  })
+  @IsObject()
+  translations?: Record<string, Record<string, string | null>>;
   @ApiPropertyOptional({
     type: 'string',
     example: 'Harvest drop — limited batch',

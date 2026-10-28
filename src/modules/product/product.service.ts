@@ -20,6 +20,8 @@ import { join } from 'path';
 import { formatProductImages } from 'src/shared/utils/utils';
 import { processProductImage } from 'src/shared/sharp/image-processing';
 import { Users } from '../users/entities/user.entity';
+import { ContentTranslationService } from 'src/shared/node/content-translation.service';
+import { ContentTranslation } from 'src/shared/node/content-translation.entity';
 
 @Injectable()
 export class ProductService {
@@ -29,7 +31,23 @@ export class ProductService {
     private readonly _productRepo: Repository<Product>,
     @InjectRepository(ProductRating)
     private readonly _ratingRepo: Repository<ProductRating>,
+    private readonly _translationService: ContentTranslationService,
   ) {}
+
+  private async attachProductTranslations<T extends Product>(products: T[]) {
+    const translatedProducts = await this._translationService.attach('product', products);
+    const categories = Array.from(
+      new Map(
+        products.filter((product) => product.category).map((product) => [product.category.id, product.category]),
+      ).values(),
+    );
+    const translatedCategories = await this._translationService.attach('category', categories);
+    const categoriesById = new Map(translatedCategories.map((category) => [category.id, category]));
+    return translatedProducts.map((product) => ({
+      ...product,
+      category: product.category ? categoriesById.get(product.category.id) : product.category,
+    }));
+  }
 
   /**
    * Joins with variants/images multiply the raw rows (one per joined row),
@@ -92,6 +110,10 @@ export class ProductService {
           discountPercent: createProductDto.discountPercent ?? 0,
           category: category,
         }),
+      );
+      await this._translationService.save(
+        'product', savedProduct.id, createProductDto.translations ?? {},
+        queryRunner.manager.getRepository(ContentTranslation),
       );
 
       if (createProductDto.variants?.length) {
@@ -186,6 +208,10 @@ export class ProductService {
       }
 
       await queryRunner.manager.save(Product, product);
+      await this._translationService.save(
+        'product', product.id, updateProductDto.translations,
+        queryRunner.manager.getRepository(ContentTranslation),
+      );
 
       if (updateProductDto.variants?.length) {
         const incoming = updateProductDto.variants;
@@ -388,7 +414,7 @@ export class ProductService {
 
     const total = await countQb.getCount();
 
-    const data = this.attachRatings(raw.entities, raw.raw);
+    const data = await this.attachProductTranslations(this.attachRatings(raw.entities, raw.raw));
 
     const formattedData = formatProductImages(data);
 
@@ -494,7 +520,7 @@ export class ProductService {
 
     const total = await countQb.getCount();
 
-    const data = this.attachRatings(raw.entities, raw.raw);
+    const data = await this.attachProductTranslations(this.attachRatings(raw.entities, raw.raw));
 
     const formattedData = formatProductImages(data);
 
@@ -575,7 +601,7 @@ export class ProductService {
       .take(8)
       .getRawAndEntities();
 
-    const products = this.attachRatings(data.entities, data.raw);
+    const products = await this.attachProductTranslations(this.attachRatings(data.entities, data.raw));
 
     const formattedData = formatProductImages(products);
 
@@ -606,6 +632,7 @@ export class ProductService {
     }
 
     await this._productRepo.softRemove(product);
+    await this._translationService.remove('product', id);
 
     return {
       message: 'Product deleted successfully.',

@@ -13,6 +13,9 @@ import { CreateHeroSlideDto } from './dto/create-hero-slide.dto';
 import { UpdateHeroSlideDto } from './dto/update-hero-slide.dto';
 import { formatImageUrl } from 'src/shared/utils/utils';
 import { processHeroImage } from 'src/shared/sharp/image-processing';
+import { parseTranslations } from 'src/shared/utils/translations';
+import { ContentTranslationService } from 'src/shared/node/content-translation.service';
+import { ContentTranslation } from 'src/shared/node/content-translation.entity';
 
 @Injectable()
 export class HeroSectionService {
@@ -20,13 +23,15 @@ export class HeroSectionService {
     @InjectRepository(HeroSlide)
     private readonly _heroSlideRepo: Repository<HeroSlide>,
     private readonly _dataSource: DataSource,
+    private readonly _translationService: ContentTranslationService,
   ) {}
 
   async getActiveSlides() {
-    const slides = await this._heroSlideRepo.find({
+    const rows = await this._heroSlideRepo.find({
       where: { isActive: true },
       order: { displayOrder: 'ASC' },
     });
+    const slides = await this._translationService.attach('hero', rows);
 
     const formatted = slides.map((s) => ({
       ...s,
@@ -41,9 +46,10 @@ export class HeroSectionService {
   }
 
   async getAllSlides() {
-    const slides = await this._heroSlideRepo.find({
+    const rows = await this._heroSlideRepo.find({
       order: { displayOrder: 'ASC' },
     });
+    const slides = await this._translationService.attach('hero', rows);
 
     const formatted = slides.map((s) => ({
       ...s,
@@ -74,14 +80,19 @@ export class HeroSectionService {
         imageUrl = `/uploads/${file.filename}`;
       }
 
+      const { translations, ...slideFields } = createHeroSlideDto;
       const slide = queryRunner.manager.create(HeroSlide, {
-        ...createHeroSlideDto,
+        ...slideFields,
         imageUrl,
         displayOrder: count,
         isActive: true,
       });
 
       await queryRunner.manager.save(slide);
+      await this._translationService.save(
+        'hero', slide.id, parseTranslations(translations) ?? {},
+        queryRunner.manager.getRepository(ContentTranslation),
+      );
       await queryRunner.commitTransaction();
 
       return {
@@ -129,8 +140,13 @@ export class HeroSectionService {
         slide.imageUrl = `/uploads/${file.filename}`;
       }
 
-      Object.assign(slide, updateHeroSlideDto);
+      const { translations, ...slideFields } = updateHeroSlideDto;
+      Object.assign(slide, slideFields);
       await queryRunner.manager.save(slide);
+      await this._translationService.save(
+        'hero', slide.id, parseTranslations(translations),
+        queryRunner.manager.getRepository(ContentTranslation),
+      );
       await queryRunner.commitTransaction();
 
       return {
@@ -174,6 +190,7 @@ export class HeroSectionService {
       }
 
       await queryRunner.manager.remove(slide);
+      await queryRunner.manager.getRepository(ContentTranslation).delete({ contentType: 'hero', contentId: id });
 
       const remaining = await queryRunner.manager.find(HeroSlide, {
         order: { displayOrder: 'ASC' },

@@ -3,10 +3,12 @@ import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
+import { ContentTranslations } from 'src/shared/utils/translations';
 
 export class CreateCategoryDto {
   @ApiProperty({
@@ -18,6 +20,10 @@ export class CreateCategoryDto {
   @IsString()
   @MaxLength(255)
   name: string;
+
+  @IsOptional()
+  @IsObject()
+  translations?: ContentTranslations;
 
   @ApiPropertyOptional({
     type: 'boolean',

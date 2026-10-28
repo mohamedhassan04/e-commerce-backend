@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ContentTranslationModule } from './shared/node/content-translation.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     EventEmitterModule.forRoot(),
     ThrottlerModule.forRoot(configService.getThrottlerConfig()),
     ...AllModules,
+    ContentTranslationModule,
   ],
   controllers: [],
   providers: [

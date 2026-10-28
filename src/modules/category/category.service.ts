@@ -9,18 +9,22 @@ import { Repository } from 'typeorm';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Category } from './entities/category.entity';
+import { ContentTranslationService } from 'src/shared/node/content-translation.service';
 
 @Injectable()
 export class CategoryService {
   constructor(
     @InjectRepository(Category)
     private readonly _categoryRepo: Repository<Category>,
+    private readonly _translationService: ContentTranslationService,
   ) {}
 
   async createCategory(createCategoryDto: CreateCategoryDto) {
     try {
-      const category = this._categoryRepo.create(createCategoryDto);
-      await this._categoryRepo.save(category);
+      const { translations, ...fields } = createCategoryDto;
+      const category = this._categoryRepo.create(fields);
+      const saved = await this._categoryRepo.save(category);
+      await this._translationService.save('category', saved.id, translations);
 
       return {
         message: 'Category created successfully.',
@@ -35,11 +39,12 @@ export class CategoryService {
     const categories = await this._categoryRepo.find({
       order: { createdAt: 'DESC' },
     });
+    const translated = await this._translationService.attach('category', categories);
 
     return {
       message: 'Categories retrieved successfully.',
       HttpStatus: HttpStatus.OK,
-      data: categories,
+      data: translated,
     };
   }
 
@@ -50,10 +55,12 @@ export class CategoryService {
       throw new NotFoundException(`Category with ID "${id}" not found.`);
     }
 
+    const [translated] = await this._translationService.attach('category', [category]);
+
     return {
       message: 'Category retrieved successfully.',
       HttpStatus: HttpStatus.OK,
-      data: category,
+      data: translated,
     };
   }
 
@@ -64,8 +71,10 @@ export class CategoryService {
       throw new NotFoundException(`Category with ID "${id}" not found.`);
     }
 
-    Object.assign(category, updateCategoryDto);
+    const { translations, ...fields } = updateCategoryDto;
+    Object.assign(category, fields);
     await this._categoryRepo.save(category);
+    await this._translationService.save('category', category.id, translations);
 
     return {
       message: 'Category updated successfully.',
@@ -81,6 +90,7 @@ export class CategoryService {
     }
 
     await this._categoryRepo.remove(category);
+    await this._translationService.remove('category', id);
 
     return {
       message: 'Category deleted successfully.',
