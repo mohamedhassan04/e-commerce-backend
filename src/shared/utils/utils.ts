@@ -61,13 +61,13 @@ export function applyDiscount(
 export function formatPrice(value: any): string {
   const numericValue = parseFloat(value);
   if (isNaN(numericValue)) {
-    return '0.000';
+    return '0.00 Kč';
   }
-  const fixedValue = numericValue.toFixed(3);
+  const fixedValue = numericValue.toFixed(2);
   const [integerPart, decimalPart] = fixedValue.split('.');
   const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
-  return `${formattedInteger}.${decimalPart}`;
+  return `${formattedInteger}.${decimalPart} Kč`;
 }
 
 export function formatImageUrl(url: string): string {

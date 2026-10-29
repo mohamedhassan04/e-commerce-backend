@@ -1,64 +1,51 @@
+import { renderEmailLayout } from './email-layout';
+
 export const getEmailWelcomeTemplate = (
   name: string,
   email: string,
   tempPassword: string,
   language: 'cz' | 'en' = 'en',
 ) => {
-  const copy = language === 'cz'
+  const isCzech = language === 'cz';
+  const copy = isCzech
     ? {
-        welcome: 'Vítejte',
-        message: 'Váš účet byl vytvořen na naší platformě.',
-        credentials: 'Vaše přihlašovací údaje:',
+        eyebrow: 'VÁŠ ÚČET',
+        title: 'Vítejte ve Verdant & Co.',
+        greeting: 'Dobrý den',
+        message: 'Váš účet je připraven. Níže najdete své přihlašovací údaje.',
         email: 'E-mail',
         password: 'Dočasné heslo',
-        visit: 'Přejít na platformu',
-        warning: 'Z bezpečnostních důvodů si při prvním přihlášení změňte heslo.',
+        visit: 'Přejít na účet',
+        warning: 'Z bezpečnostních důvodů si po přihlášení změňte dočasné heslo.',
       }
     : {
-        welcome: 'Welcome',
-        message: 'Your account has been created on our platform.',
-        credentials: 'Your login details:',
+        eyebrow: 'YOUR ACCOUNT',
+        title: 'Welcome to Verdant & Co.',
+        greeting: 'Hello',
+        message: 'Your account is ready. Here are your sign-in details.',
         email: 'Email',
         password: 'Temporary password',
-        visit: 'Visit the platform',
-        warning: 'For security, please change your password the first time you sign in.',
+        visit: 'Go to your account',
+        warning: 'For your security, change your temporary password after signing in.',
       };
+  const content = `
+    <p style="margin:0 0 10px;color:#1d3124;font-size:16px;line-height:1.6;">${copy.greeting} <strong>${name}</strong>,</p>
+    <p style="margin:0 0 24px;color:#66766c;font-size:15px;line-height:1.7;">${copy.message}</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #dce4dc;border-radius:12px;background:#e2ece5;">
+      <tr><td style="padding:18px 20px;border-bottom:1px solid #d1ddd3;color:#66766c;font-size:12px;">${copy.email}</td><td style="padding:18px 20px;border-bottom:1px solid #d1ddd3;color:#1d3124;font-size:14px;font-weight:600;text-align:right;">${email}</td></tr>
+      <tr><td style="padding:18px 20px;color:#66766c;font-size:12px;">${copy.password}</td><td style="padding:18px 20px;color:#1d3124;font-family:monospace;font-size:14px;font-weight:700;text-align:right;">${tempPassword}</td></tr>
+    </table>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:26px 0 0;">
+      <tr><td align="center" style="border-radius:999px;background:#1d3124;">
+        <a href="${process.env.FRONTEND_PATH}login" style="display:inline-block;padding:14px 23px;color:#faf9f1;font-size:14px;font-weight:700;text-decoration:none;">${copy.visit}</a>
+      </td></tr>
+    </table>
+    <p style="margin:23px 0 0;padding-top:18px;border-top:1px solid #e5e7dc;color:#66766c;font-size:13px;line-height:1.6;">${copy.warning}</p>`;
 
-  return `
-<!DOCTYPE html>
-<html lang="${language === 'cz' ? 'cs' : 'en'}">
-  <head>
-    <meta charset="UTF-8" />
-    <style>
-      body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
-      .container { background: #fff; padding: 30px; border-radius: 8px; max-width: 500px; margin: auto; }
-      .credentials { background: #f0f4ff; border: 1px solid #d0d9ff; border-radius: 6px; padding: 16px; margin: 20px 0; }
-      .credentials p { margin: 6px 0; font-size: 15px; }
-      .btn { display: inline-block; font-size: 15px; font-weight: 700; width: 100%;  margin-top: 20px; padding: 12px 24px; background: #0157a4 ; color: #fff; border-radius: 6px; text-decoration: none; }
-      .warning { font-size: 15px; font-weight: 400; color: #888; margin-top: 20px; }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h2>${copy.welcome}, ${name}</h2>
-      <p>${copy.message}</p>
-      <p><strong>${copy.credentials}</strong></p>
-
-      <div class="credentials">
-        <p><strong>${copy.email}:</strong> ${email}</p>
-        <p><strong>${copy.password}:</strong> <code>${tempPassword}</code></p>
-      </div>
-
-      <a href="${process.env.FRONTEND_PATH}login"
-       style="display:block; text-align:center; font-size:15px; font-weight:700; width:100%; margin-top:20px; padding:12px 24px; background:#0157a4; color:#fff; border-radius:6px; text-decoration:none; box-sizing:border-box;">
-       ${copy.visit}
-      </a>
-
-      <p class="warning">
-        ${copy.warning}
-      </p>
-    </div>
-  </body>
-</html>
-`;
+  return renderEmailLayout({
+    language,
+    eyebrow: copy.eyebrow,
+    title: copy.title,
+    content,
+  });
 };

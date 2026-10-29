@@ -1,4 +1,5 @@
 import { formatPrice } from 'src/shared/utils/utils';
+import { renderEmailLayout } from './email-layout';
 
 export interface OrderEmailData {
   language?: 'cz' | 'en';
@@ -15,121 +16,86 @@ export interface OrderEmailData {
 }
 
 export function getOrderEmailTemplate(data: OrderEmailData) {
-  const isCzech = data.language === 'cz';
+  const language = data.language ?? 'en';
+  const isCzech = language === 'cz';
   const copy = isCzech
     ? {
-        title: 'Potvrzení objednávky', greeting: 'Dobrý den', customer: 'zákazníku',
-        thanks: 'Děkujeme za vaši objednávku. Zde je přehled vašeho nákupu.',
-        discount: 'Uplatněná sleva', product: 'Produkt', quantity: 'Počet', total: 'Celkem',
-        questions: 'Máte-li jakékoli dotazy, odpovězte na tento e-mail.',
+        eyebrow: `OBJEDNÁVKA ${data.ref}`,
+        title: 'Děkujeme za vaši objednávku',
+        greeting: 'Dobrý den',
+        customer: 'zákazníku',
+        intro: 'Vaši objednávku jsme přijali. Níže najdete její přehled.',
+        product: 'Produkt',
+        quantity: 'Počet',
+        total: 'Celkem',
+        discount: 'Uplatněná sleva',
+        questions: 'Potřebujete poradit? Odpovězte na tento e-mail.',
       }
     : {
-        title: 'Order Confirmation', greeting: 'Hi', customer: 'Customer',
-        thanks: "Thank you for your order! Here's a summary of your purchase.",
-        discount: 'Discount applied', product: 'Product', quantity: 'Qty', total: 'Total',
-        questions: 'If you have any questions, reply to this email.',
+        eyebrow: `ORDER ${data.ref}`,
+        title: 'Thank you for your order',
+        greeting: 'Hello',
+        customer: 'Customer',
+        intro: 'We have received your order. Here is a summary for your records.',
+        product: 'Product',
+        quantity: 'Qty',
+        total: 'Total',
+        discount: 'Discount applied',
+        questions: 'Need a hand? Just reply to this email.',
       };
+
   const itemRows = (data.items || [])
-    .map((item) => {
+    .map((item, index) => {
       const original = item.originalPriceTTC;
-      const totalCell =
+      const formattedPrice =
         original != null && Number(original) > Number(item.priceTTC)
-          ? `<span style="color:#999;text-decoration:line-through;font-weight:400;">${formatPrice(original)}</span><br/>${formatPrice(item.priceTTC)}`
-          : formatPrice(item.priceTTC);
+          ? `<span style="color:#66766c;text-decoration:line-through;font-weight:400;">${formatPrice(original)}</span><br/><strong style="color:#1d3124;">${formatPrice(item.priceTTC)}</strong>`
+          : `<strong style="color:#1d3124;">${formatPrice(item.priceTTC)}</strong>`;
 
       return `
-      <tr>
-        <td style="padding:10px 12px;border-bottom:1px solid #eee;font-weight:600;">${item.productName}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;">${item.quantity}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;">${totalCell}</td>
-      </tr>`;
+        <tr style="background:${index % 2 === 0 ? '#faf9f1' : '#f3f3e9'};">
+          <td style="padding:14px 12px;border-bottom:1px solid #e5e7dc;color:#1d3124;font-size:14px;font-weight:600;">${item.productName}</td>
+          <td style="padding:14px 12px;border-bottom:1px solid #e5e7dc;color:#66766c;font-size:14px;text-align:center;">${item.quantity}</td>
+          <td style="padding:14px 12px;border-bottom:1px solid #e5e7dc;font-size:14px;text-align:right;white-space:nowrap;">${formattedPrice}</td>
+        </tr>`;
     })
     .join('');
 
   const savings =
     data.savings != null && Number(data.savings) > 0 ? Number(data.savings) : 0;
-
   const savingsRow = savings
-    ? `
-              <tr>
-                <td colspan="2" style="padding:12px 0 0;font-size:14px;color:#2e7d32;font-weight:600;">
-                  ${copy.discount}
-                </td>
-                <td style="padding:12px 0 0;text-align:right;font-size:14px;color:#2e7d32;font-weight:700;">
-                  -${formatPrice(savings)}
-                </td>
-              </tr>`
+    ? `<tr>
+        <td style="padding:14px 12px;color:#3c5243;font-size:13px;font-weight:600;">${copy.discount}</td>
+        <td style="padding:14px 12px;color:#3c5243;font-size:13px;text-align:right;white-space:nowrap;">-${formatPrice(savings)}</td>
+      </tr>`
     : '';
 
-  return `
-<!DOCTYPE html>
-<html lang="${isCzech ? 'cs' : 'en'}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${copy.title} - ${data.ref}</title>
-</head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f4f4f4;">
-    <tr>
-      <td align="center" style="padding:40px 16px;">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;">
+  const content = `
+    <p style="margin:0 0 10px;color:#1d3124;font-size:16px;line-height:1.6;">${copy.greeting} <strong>${data.clientName || copy.customer}</strong>,</p>
+    <p style="margin:0 0 24px;color:#66766c;font-size:15px;line-height:1.7;">${copy.intro}</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 18px;border:1px solid #dce4dc;border-radius:12px;border-spacing:0;overflow:hidden;">
+      <thead>
+        <tr style="background:#e2ece5;">
+          <th style="padding:11px 12px;color:#3c5243;font-size:10px;text-align:left;text-transform:uppercase;letter-spacing:1.2px;">${copy.product}</th>
+          <th style="padding:11px 12px;color:#3c5243;font-size:10px;text-align:center;text-transform:uppercase;letter-spacing:1.2px;">${copy.quantity}</th>
+          <th style="padding:11px 12px;color:#3c5243;font-size:10px;text-align:right;text-transform:uppercase;letter-spacing:1.2px;">${copy.total}</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-spacing:0;">
+      ${savingsRow}
+      <tr>
+        <td style="padding:17px 12px;border-top:2px solid #1d3124;color:#14231a;font-family:Georgia,'Times New Roman',serif;font-size:19px;font-weight:700;">${copy.total}</td>
+        <td style="padding:17px 12px;border-top:2px solid #1d3124;color:#14231a;font-size:20px;font-weight:700;text-align:right;white-space:nowrap;">${formatPrice(data.totalTTC)}</td>
+      </tr>
+    </table>
+    <p style="margin:24px 0 0;padding-top:18px;border-top:1px solid #e5e7dc;color:#66766c;font-size:13px;line-height:1.6;">${copy.questions}</p>`;
 
-          <tr>
-            <td style="background:#1a1a2e;padding:32px 28px;text-align:center;">
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">${copy.title}</h1>
-              <p style="margin:8px 0 0;color:#aaa;font-size:14px;">${data.ref}</p>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:28px;">
-              <p style="margin:0 0 16px;font-size:15px;color:#333;">
-                ${copy.greeting} <strong>${data.clientName || copy.customer}</strong>,
-              </p>
-              <p style="margin:0 0 20px;font-size:15px;color:#555;line-height:1.6;">
-                ${copy.thanks}
-              </p>
-
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;">
-                <thead>
-                  <tr style="background:#1a1a2e;">
-                    <th style="padding:10px 12px;text-align:left;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;">${copy.product}</th>
-                    <th style="padding:10px 12px;text-align:center;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;">${copy.quantity}</th>
-                    <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;">${copy.total}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${itemRows}
-                </tbody>
-              </table>
-
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:20px;">
-                ${savingsRow}
-                <tr>
-                  <td style="padding:12px 0;border-top:2px solid #1a1a2e;font-size:16px;font-weight:700;color:#1a1a2e;">
-                    ${copy.total}
-                  </td>
-                  <td style="padding:12px 0;border-top:2px solid #1a1a2e;text-align:right;font-size:18px;font-weight:700;color:#1a1a2e;">
-                    ${formatPrice(data.totalTTC)}
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="background:#f9f9f9;padding:20px 28px;text-align:center;border-top:1px solid #eee;">
-              <p style="margin:0;font-size:13px;color:#999;">
-                ${copy.questions}
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+  return renderEmailLayout({
+    language,
+    eyebrow: copy.eyebrow,
+    title: copy.title,
+    content,
+  });
 }

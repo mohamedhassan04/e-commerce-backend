@@ -1,34 +1,36 @@
-export const getForgotPasswordTemplate = (resetCode: string, language: 'cz' | 'en' = 'en') => {
-  const copy = language === 'cz'
-    ? { title: 'Zapomenuté heslo', prompt: 'Zde je váš kód pro obnovení hesla:', expiry: 'Tento kód je platný po dobu 30 minut.' }
-    : { title: 'Forgot password', prompt: 'Here is your password reset code:', expiry: 'This code is valid for 30 minutes.' };
+import { renderEmailLayout } from './email-layout';
 
-  return `
-<!DOCTYPE html>
-<html lang="${language === 'cz' ? 'cs' : 'en'}">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${copy.title}</title>
-</head>
-<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4; padding: 40px 0;">
-    <tr>
-      <td align="center">
-        <table width="500" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden;">
-          <tr>
-            <td style="padding: 32px; text-align: center;">
-              <h1 style="font-size: 22px; margin-bottom: 16px; color: #333;">${copy.title}</h1>
-              <p style="font-size: 15px; color: #666; margin-bottom: 24px;">${copy.prompt}</p>
-              <div style="display: inline-block; padding: 14px 32px; background-color: #000; color: #fff; font-size: 20px; font-weight: bold; letter-spacing: 2px; border-radius: 6px;">${resetCode}</div>
-              <p style="font-size: 13px; color: #999; margin-top: 24px;">${copy.expiry}</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-`;
+export const getForgotPasswordTemplate = (
+  resetCode: string,
+  language: 'cz' | 'en' = 'en',
+) => {
+  const isCzech = language === 'cz';
+  const copy = isCzech
+    ? {
+        eyebrow: 'PŘÍSTUP K ÚČTU',
+        title: 'Obnovte své heslo',
+        prompt: 'Použijte tento kód k obnovení hesla.',
+        expiry: 'Kód je platný 30 minut. Pokud jste o něj nežádali, můžete tento e-mail ignorovat.',
+      }
+    : {
+        eyebrow: 'ACCOUNT ACCESS',
+        title: 'Reset your password',
+        prompt: 'Use this code to reset your password.',
+        expiry: "This code is valid for 30 minutes. If you didn't request it, you can ignore this email.",
+      };
+  const content = `
+    <p style="margin:0 0 22px;color:#66766c;font-size:15px;line-height:1.7;">${copy.prompt}</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #f0d4bd;border-radius:12px;background:#fae9d8;">
+      <tr><td align="center" style="padding:25px 16px;">
+        <p style="margin:0;color:#14231a;font-family:Georgia,'Times New Roman',serif;font-size:32px;font-weight:700;letter-spacing:6px;">${resetCode}</p>
+      </td></tr>
+    </table>
+    <p style="margin:18px 0 0;color:#66766c;font-size:13px;line-height:1.6;">${copy.expiry}</p>`;
+
+  return renderEmailLayout({
+    language,
+    eyebrow: copy.eyebrow,
+    title: copy.title,
+    content,
+  });
 };

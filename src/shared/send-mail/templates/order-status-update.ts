@@ -1,25 +1,19 @@
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Pending',
-  CONFIRMED: 'Confirmed',
-  SHIPPED: 'Shipped',
-  DELIVERED: 'Delivered',
-  CANCELLED: 'Cancelled',
-};
+import { renderEmailLayout } from './email-layout';
 
-const CZECH_STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Čeká na vyřízení',
-  CONFIRMED: 'Potvrzeno',
-  SHIPPED: 'Odesláno',
-  DELIVERED: 'Doručeno',
-  CANCELLED: 'Zrušeno',
+const STATUS_LABELS: Record<string, { en: string; cz: string }> = {
+  PENDING: { en: 'Pending', cz: 'Čeká na vyřízení' },
+  CONFIRMED: { en: 'Confirmed', cz: 'Potvrzeno' },
+  SHIPPED: { en: 'Shipped', cz: 'Odesláno' },
+  DELIVERED: { en: 'Delivered', cz: 'Doručeno' },
+  CANCELLED: { en: 'Cancelled', cz: 'Zrušeno' },
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: '#f0ad4e',
-  CONFIRMED: '#5bc0de',
-  SHIPPED: '#0275d8',
-  DELIVERED: '#5cb85c',
-  CANCELLED: '#d9534f',
+  PENDING: '#c96d33',
+  CONFIRMED: '#3c5243',
+  SHIPPED: '#3c5243',
+  DELIVERED: '#1d3124',
+  CANCELLED: '#66766c',
 };
 
 export interface OrderStatusUpdateEmailData {
@@ -30,77 +24,44 @@ export interface OrderStatusUpdateEmailData {
 }
 
 export function getOrderStatusUpdateTemplate(data: OrderStatusUpdateEmailData) {
-  const isCzech = data.language === 'cz';
-  const statusLabel = (isCzech ? CZECH_STATUS_LABELS : STATUS_LABELS)[data.status] || data.status;
-  const statusColor = STATUS_COLORS[data.status] || '#333';
+  const language = data.language ?? 'en';
+  const isCzech = language === 'cz';
   const copy = isCzech
     ? {
-        title: 'Aktualizace stavu objednávky', greeting: 'Dobrý den', customer: 'zákazníku',
-        updated: 'Stav vaší objednávky', changed: 'byl aktualizován.',
-        questions: 'Máte-li jakékoli dotazy, odpovězte na tento e-mail.',
-        thanks: 'Děkujeme za vaši objednávku.',
+        eyebrow: `OBJEDNÁVKA ${data.ref}`,
+        title: 'Změna stavu objednávky',
+        greeting: 'Dobrý den',
+        customer: 'zákazníku',
+        message: 'Stav vaší objednávky byl aktualizován.',
+        questions: 'Potřebujete poradit? Odpovězte na tento e-mail.',
       }
     : {
-        title: 'Order Status Update', greeting: 'Hi', customer: 'Customer',
-        updated: 'Your order', changed: 'status has been updated.',
-        questions: 'If you have any questions, reply to this email.',
-        thanks: 'Thank you for your order.',
+        eyebrow: `ORDER ${data.ref}`,
+        title: 'An update on your order',
+        greeting: 'Hello',
+        customer: 'Customer',
+        message: 'The status of your order has been updated.',
+        questions: 'Need a hand? Just reply to this email.',
       };
+  const statusLabel = STATUS_LABELS[data.status]?.[language] ?? data.status;
+  const statusColor = STATUS_COLORS[data.status] ?? '#3c5243';
+  const content = `
+    <p style="margin:0 0 10px;color:#1d3124;font-size:16px;line-height:1.6;">${copy.greeting} <strong>${data.clientName || copy.customer}</strong>,</p>
+    <p style="margin:0 0 24px;color:#66766c;font-size:15px;line-height:1.7;">${copy.message}</p>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #dce4dc;border-radius:12px;background:#e2ece5;">
+      <tr>
+        <td align="center" style="padding:25px 20px;">
+          <p style="margin:0 0 12px;color:#66766c;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;">${data.ref}</p>
+          <span style="display:inline-block;padding:11px 19px;border-radius:999px;background:${statusColor};color:#fff;font-size:13px;font-weight:700;letter-spacing:0.6px;">${statusLabel}</span>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:24px 0 0;padding-top:18px;border-top:1px solid #e5e7dc;color:#66766c;font-size:13px;line-height:1.6;">${copy.questions}</p>`;
 
-  return `
-<!DOCTYPE html>
-<html lang="${isCzech ? 'cs' : 'en'}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${copy.title} - ${data.ref}</title>
-</head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f4f4f4;">
-    <tr>
-      <td align="center" style="padding:40px 16px;">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;">
-
-          <tr>
-            <td style="background:#1a1a2e;padding:32px 28px;text-align:center;">
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">${copy.title}</h1>
-              <p style="margin:8px 0 0;color:#aaa;font-size:14px;">${data.ref}</p>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:28px;">
-              <p style="margin:0 0 16px;font-size:15px;color:#333;">
-                ${copy.greeting} <strong>${data.clientName || copy.customer}</strong>,
-              </p>
-              <p style="margin:0 0 24px;font-size:15px;color:#555;line-height:1.6;">
-                ${copy.updated} <strong>${data.ref}</strong> ${copy.changed}
-              </p>
-
-              <div style="text-align:center;margin:24px 0;">
-                <span style="display:inline-block;padding:12px 28px;border-radius:6px;background:${statusColor};color:#fff;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">
-                  ${statusLabel}
-                </span>
-              </div>
-
-              <p style="margin:24px 0 0;font-size:14px;color:#777;line-height:1.6;text-align:center;">
-                ${copy.questions}
-              </p>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="background:#f9f9f9;padding:20px 28px;text-align:center;border-top:1px solid #eee;">
-              <p style="margin:0;font-size:13px;color:#999;">
-                ${copy.thanks}
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+  return renderEmailLayout({
+    language,
+    eyebrow: copy.eyebrow,
+    title: copy.title,
+    content,
+  });
 }
