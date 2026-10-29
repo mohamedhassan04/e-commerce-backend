@@ -20,6 +20,7 @@ import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { BulkUpdateOrderStatusDto } from './dto/bulk-update-order-status.dto';
+import { ValidateCartStockDto } from './dto/validate-cart-stock.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -44,6 +45,12 @@ export class OrderController {
   createOrder(@Body() createOrderDto: CreateOrderDto, @Req() req: Request) {
     const userId = (req as any)?.user?.id?.id || null;
     return this.orderService.createOrder(createOrderDto, userId);
+  }
+
+  @ApiOperation({ summary: 'Check stock before changing cart quantity' })
+  @Post('validate-stock')
+  validateCartStock(@Body() dto: ValidateCartStockDto) {
+    return this.orderService.validateCartStock(dto);
   }
 
   @ApiOperation({ summary: 'Get current user orders' })

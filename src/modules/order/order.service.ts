@@ -19,6 +19,7 @@ import { Users } from 'src/modules/users/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { BulkUpdateOrderStatusDto } from './dto/bulk-update-order-status.dto';
+import { ValidateCartStockDto } from './dto/validate-cart-stock.dto';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
 import { generateOrderNumber, applyDiscount } from 'src/shared/utils/utils';
@@ -314,6 +315,20 @@ export class OrderService {
     return {
       message: 'Order placed successfully.',
       HttpStatus: HttpStatus.CREATED,
+    };
+  }
+
+  async validateCartStock(dto: ValidateCartStockDto) {
+    const variant = await this._dataSource.getRepository(ProductVariant).findOne({
+      where: { id: dto.productVariantId },
+    });
+    if (!variant) {
+      throw new NotFoundException('This product option is no longer available.');
+    }
+
+    return {
+      valid: dto.quantity <= variant.stock,
+      availableStock: variant.stock,
     };
   }
 
