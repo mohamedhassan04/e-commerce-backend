@@ -13,12 +13,12 @@ import {
 export class EmailService {
   constructor(private readonly mailerService: MailerService) {}
 
-  async sendEmailForgotPassword(email: string, resetCode: string) {
+  async sendEmailForgotPassword(email: string, resetCode: string, language: 'cz' | 'en' = 'en') {
     try {
       await this.mailerService.sendMail({
         to: email,
-        subject: 'Réinitialisation de mot de passe',
-        html: getForgotPasswordTemplate(resetCode),
+        subject: language === 'cz' ? 'Obnovení hesla' : 'Password reset',
+        html: getForgotPasswordTemplate(resetCode, language),
       });
     } catch (error) {
       console.error('Error sending email:', error);
@@ -28,12 +28,12 @@ export class EmailService {
     }
   }
 
-  async sendEmailCreateUserAccount(email: string, activeCode: string) {
+  async sendEmailCreateUserAccount(email: string, activeCode: string, language: 'cz' | 'en' = 'en') {
     try {
       await this.mailerService.sendMail({
         to: email,
-        subject: 'Vérification de votre compte',
-        html: getEmailVerificationTemplate(activeCode),
+        subject: language === 'cz' ? 'Ověření účtu' : 'Verify your account',
+        html: getEmailVerificationTemplate(activeCode, language),
       });
     } catch (error) {
       throw new InternalServerErrorException(
@@ -42,12 +42,12 @@ export class EmailService {
     }
   }
 
-  async sendWelcomeEmails(name: string, email: string, tempPassword: string) {
+  async sendWelcomeEmails(name: string, email: string, tempPassword: string, language: 'cz' | 'en' = 'en') {
     try {
       await this.mailerService.sendMail({
         to: email,
-        subject: 'Bienvenue sur notre plateforme',
-        html: getEmailWelcomeTemplate(name, email, tempPassword),
+        subject: language === 'cz' ? 'Vítejte na naší platformě' : 'Welcome to our platform',
+        html: getEmailWelcomeTemplate(name, email, tempPassword, language),
       });
     } catch (error) {
       throw new InternalServerErrorException(
@@ -62,7 +62,7 @@ export class EmailService {
   ) {
     await this.mailerService.sendMail({
       to,
-      subject: `Order Status Update - ${data.ref}`,
+      subject: `${data.language === 'cz' ? 'Aktualizace stavu objednávky' : 'Order Status Update'} - ${data.ref}`,
       html: getOrderStatusUpdateTemplate(data),
     });
   }
@@ -70,7 +70,7 @@ export class EmailService {
   async sendOrderEmail(to: string, data: OrderEmailData) {
     await this.mailerService.sendMail({
       to,
-      subject: `Order Confirmation - ${data.ref}`,
+      subject: `${data.language === 'cz' ? 'Potvrzení objednávky' : 'Order Confirmation'} - ${data.ref}`,
       html: getOrderEmailTemplate(data),
     });
   }

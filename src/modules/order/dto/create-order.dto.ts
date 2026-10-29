@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -90,6 +91,15 @@ export class PhoneNumberValidationConstraint implements ValidatorConstraintInter
 }
 
 export class CreateOrderDto {
+  @ApiPropertyOptional({
+    description: 'Language used for order emails',
+    enum: ['cz', 'en'],
+    default: 'en',
+  })
+  @IsOptional()
+  @IsIn(['cz', 'en'])
+  language?: 'cz' | 'en';
+
   @ApiProperty({
     type: [CreateOrderItemDto],
     description: 'Order items',

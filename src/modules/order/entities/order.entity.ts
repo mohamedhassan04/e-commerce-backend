@@ -25,6 +25,9 @@ export class Order extends Node {
   })
   status: OrderStatus;
 
+  @Column({ name: 'email_language', type: 'varchar', length: 2, default: 'en' })
+  emailLanguage: 'cz' | 'en';
+
   @Column({ name: 'total', type: 'decimal', precision: 10, scale: 2 })
   total: number;
 

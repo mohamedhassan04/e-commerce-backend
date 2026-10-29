@@ -6,6 +6,14 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: 'Cancelled',
 };
 
+const CZECH_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Čeká na vyřízení',
+  CONFIRMED: 'Potvrzeno',
+  SHIPPED: 'Odesláno',
+  DELIVERED: 'Doručeno',
+  CANCELLED: 'Zrušeno',
+};
+
 const STATUS_COLORS: Record<string, string> = {
   PENDING: '#f0ad4e',
   CONFIRMED: '#5bc0de',
@@ -15,22 +23,37 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export interface OrderStatusUpdateEmailData {
+  language?: 'cz' | 'en';
   ref: string;
   clientName: string;
   status: string;
 }
 
 export function getOrderStatusUpdateTemplate(data: OrderStatusUpdateEmailData) {
-  const statusLabel = STATUS_LABELS[data.status] || data.status;
+  const isCzech = data.language === 'cz';
+  const statusLabel = (isCzech ? CZECH_STATUS_LABELS : STATUS_LABELS)[data.status] || data.status;
   const statusColor = STATUS_COLORS[data.status] || '#333';
+  const copy = isCzech
+    ? {
+        title: 'Aktualizace stavu objednávky', greeting: 'Dobrý den', customer: 'zákazníku',
+        updated: 'Stav vaší objednávky', changed: 'byl aktualizován.',
+        questions: 'Máte-li jakékoli dotazy, odpovězte na tento e-mail.',
+        thanks: 'Děkujeme za vaši objednávku.',
+      }
+    : {
+        title: 'Order Status Update', greeting: 'Hi', customer: 'Customer',
+        updated: 'Your order', changed: 'status has been updated.',
+        questions: 'If you have any questions, reply to this email.',
+        thanks: 'Thank you for your order.',
+      };
 
   return `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${isCzech ? 'cs' : 'en'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Order Status Update - ${data.ref}</title>
+  <title>${copy.title} - ${data.ref}</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f4f4;font-family:Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f4f4f4;">
@@ -40,7 +63,7 @@ export function getOrderStatusUpdateTemplate(data: OrderStatusUpdateEmailData) {
 
           <tr>
             <td style="background:#1a1a2e;padding:32px 28px;text-align:center;">
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Order Status Update</h1>
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">${copy.title}</h1>
               <p style="margin:8px 0 0;color:#aaa;font-size:14px;">${data.ref}</p>
             </td>
           </tr>
@@ -48,10 +71,10 @@ export function getOrderStatusUpdateTemplate(data: OrderStatusUpdateEmailData) {
           <tr>
             <td style="padding:28px;">
               <p style="margin:0 0 16px;font-size:15px;color:#333;">
-                Hi <strong>${data.clientName || 'Customer'}</strong>,
+                ${copy.greeting} <strong>${data.clientName || copy.customer}</strong>,
               </p>
               <p style="margin:0 0 24px;font-size:15px;color:#555;line-height:1.6;">
-                Your order <strong>${data.ref}</strong> status has been updated.
+                ${copy.updated} <strong>${data.ref}</strong> ${copy.changed}
               </p>
 
               <div style="text-align:center;margin:24px 0;">
@@ -61,7 +84,7 @@ export function getOrderStatusUpdateTemplate(data: OrderStatusUpdateEmailData) {
               </div>
 
               <p style="margin:24px 0 0;font-size:14px;color:#777;line-height:1.6;text-align:center;">
-                If you have any questions, reply to this email.
+                ${copy.questions}
               </p>
             </td>
           </tr>
@@ -69,7 +92,7 @@ export function getOrderStatusUpdateTemplate(data: OrderStatusUpdateEmailData) {
           <tr>
             <td style="background:#f9f9f9;padding:20px 28px;text-align:center;border-top:1px solid #eee;">
               <p style="margin:0;font-size:13px;color:#999;">
-                Thank you for your order.
+                ${copy.thanks}
               </p>
             </td>
           </tr>

@@ -1,6 +1,7 @@
 import { formatPrice } from 'src/shared/utils/utils';
 
 export interface OrderEmailData {
+  language?: 'cz' | 'en';
   ref: string;
   clientName: string;
   items: {
@@ -14,6 +15,20 @@ export interface OrderEmailData {
 }
 
 export function getOrderEmailTemplate(data: OrderEmailData) {
+  const isCzech = data.language === 'cz';
+  const copy = isCzech
+    ? {
+        title: 'Potvrzení objednávky', greeting: 'Dobrý den', customer: 'zákazníku',
+        thanks: 'Děkujeme za vaši objednávku. Zde je přehled vašeho nákupu.',
+        discount: 'Uplatněná sleva', product: 'Produkt', quantity: 'Počet', total: 'Celkem',
+        questions: 'Máte-li jakékoli dotazy, odpovězte na tento e-mail.',
+      }
+    : {
+        title: 'Order Confirmation', greeting: 'Hi', customer: 'Customer',
+        thanks: "Thank you for your order! Here's a summary of your purchase.",
+        discount: 'Discount applied', product: 'Product', quantity: 'Qty', total: 'Total',
+        questions: 'If you have any questions, reply to this email.',
+      };
   const itemRows = (data.items || [])
     .map((item) => {
       const original = item.originalPriceTTC;
@@ -38,7 +53,7 @@ export function getOrderEmailTemplate(data: OrderEmailData) {
     ? `
               <tr>
                 <td colspan="2" style="padding:12px 0 0;font-size:14px;color:#2e7d32;font-weight:600;">
-                  Discount applied
+                  ${copy.discount}
                 </td>
                 <td style="padding:12px 0 0;text-align:right;font-size:14px;color:#2e7d32;font-weight:700;">
                   -${formatPrice(savings)}
@@ -48,11 +63,11 @@ export function getOrderEmailTemplate(data: OrderEmailData) {
 
   return `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${isCzech ? 'cs' : 'en'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Order Confirmation - ${data.ref}</title>
+  <title>${copy.title} - ${data.ref}</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f4f4;font-family:Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f4f4f4;">
@@ -62,7 +77,7 @@ export function getOrderEmailTemplate(data: OrderEmailData) {
 
           <tr>
             <td style="background:#1a1a2e;padding:32px 28px;text-align:center;">
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Order Confirmation</h1>
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">${copy.title}</h1>
               <p style="margin:8px 0 0;color:#aaa;font-size:14px;">${data.ref}</p>
             </td>
           </tr>
@@ -70,18 +85,18 @@ export function getOrderEmailTemplate(data: OrderEmailData) {
           <tr>
             <td style="padding:28px;">
               <p style="margin:0 0 16px;font-size:15px;color:#333;">
-                Hi <strong>${data.clientName || 'Customer'}</strong>,
+                ${copy.greeting} <strong>${data.clientName || copy.customer}</strong>,
               </p>
               <p style="margin:0 0 20px;font-size:15px;color:#555;line-height:1.6;">
-                Thank you for your order! Here's a summary of your purchase.
+                ${copy.thanks}
               </p>
 
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;border:1px solid #eee;border-radius:8px;overflow:hidden;">
                 <thead>
                   <tr style="background:#1a1a2e;">
-                    <th style="padding:10px 12px;text-align:left;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Product</th>
-                    <th style="padding:10px 12px;text-align:center;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Qty</th>
-                    <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Total</th>
+                    <th style="padding:10px 12px;text-align:left;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;">${copy.product}</th>
+                    <th style="padding:10px 12px;text-align:center;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;">${copy.quantity}</th>
+                    <th style="padding:10px 12px;text-align:right;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;">${copy.total}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -93,7 +108,7 @@ export function getOrderEmailTemplate(data: OrderEmailData) {
                 ${savingsRow}
                 <tr>
                   <td style="padding:12px 0;border-top:2px solid #1a1a2e;font-size:16px;font-weight:700;color:#1a1a2e;">
-                    Total
+                    ${copy.total}
                   </td>
                   <td style="padding:12px 0;border-top:2px solid #1a1a2e;text-align:right;font-size:18px;font-weight:700;color:#1a1a2e;">
                     ${formatPrice(data.totalTTC)}
@@ -106,7 +121,7 @@ export function getOrderEmailTemplate(data: OrderEmailData) {
           <tr>
             <td style="background:#f9f9f9;padding:20px 28px;text-align:center;border-top:1px solid #eee;">
               <p style="margin:0;font-size:13px;color:#999;">
-                If you have any questions, reply to this email.
+                ${copy.questions}
               </p>
             </td>
           </tr>

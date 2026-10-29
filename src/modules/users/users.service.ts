@@ -62,6 +62,7 @@ export class UsersService {
       await this.emailService.sendEmailCreateUserAccount(
         createUserDto.email,
         verificationCode,
+        createUserDto.language ?? 'en',
       );
 
       return {
@@ -297,7 +298,7 @@ export class UsersService {
 
   // @desc Send forgot password code
   // @route POST /users/forgot-password
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string, language: 'cz' | 'en' = 'en') {
     const user = await this._userRepo.findOne({ where: { email } });
     if (user) {
       const resetCode = generateResetCode(10);
@@ -308,7 +309,7 @@ export class UsersService {
       user.resetPasswordCodeExpiry = expiry;
       await this._userRepo.save(user);
 
-      await this.emailService.sendEmailForgotPassword(email, resetCode);
+      await this.emailService.sendEmailForgotPassword(email, resetCode, language);
     }
 
     return {

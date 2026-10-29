@@ -1,7 +1,9 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
+  IsIn,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsStrongPassword,
   MaxLength,
@@ -9,6 +11,11 @@ import {
 } from 'class-validator';
 
 export class CreateUserDto {
+  @ApiPropertyOptional({ enum: ['cz', 'en'], description: 'Language for account emails' })
+  @IsOptional()
+  @IsIn(['cz', 'en'])
+  language?: 'cz' | 'en';
+
   @ApiProperty({
     type: 'string',
     example: 'John',

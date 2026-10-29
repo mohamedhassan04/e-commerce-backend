@@ -2,9 +2,31 @@ export const getEmailWelcomeTemplate = (
   name: string,
   email: string,
   tempPassword: string,
-) => `
+  language: 'cz' | 'en' = 'en',
+) => {
+  const copy = language === 'cz'
+    ? {
+        welcome: 'Vítejte',
+        message: 'Váš účet byl vytvořen na naší platformě.',
+        credentials: 'Vaše přihlašovací údaje:',
+        email: 'E-mail',
+        password: 'Dočasné heslo',
+        visit: 'Přejít na platformu',
+        warning: 'Z bezpečnostních důvodů si při prvním přihlášení změňte heslo.',
+      }
+    : {
+        welcome: 'Welcome',
+        message: 'Your account has been created on our platform.',
+        credentials: 'Your login details:',
+        email: 'Email',
+        password: 'Temporary password',
+        visit: 'Visit the platform',
+        warning: 'For security, please change your password the first time you sign in.',
+      };
+
+  return `
 <!DOCTYPE html>
-<html>
+<html lang="${language === 'cz' ? 'cs' : 'en'}">
   <head>
     <meta charset="UTF-8" />
     <style>
@@ -18,25 +40,25 @@ export const getEmailWelcomeTemplate = (
   </head>
   <body>
     <div class="container">
-      <h2>Bienvenue, ${name} 👋</h2>
-      <p>Votre compte a été créé sur la plateforme pour le client de votre entreprise.</p>
-      <p><strong>Voici vos identifiants de connexion :</strong></p>
+      <h2>${copy.welcome}, ${name}</h2>
+      <p>${copy.message}</p>
+      <p><strong>${copy.credentials}</strong></p>
 
       <div class="credentials">
-        <p><strong>Email :</strong> ${email}</p>
-        <p><strong>Mot de passe temporaire :</strong> <code>${tempPassword}</code></p>
+        <p><strong>${copy.email}:</strong> ${email}</p>
+        <p><strong>${copy.password}:</strong> <code>${tempPassword}</code></p>
       </div>
 
       <a href="${process.env.FRONTEND_PATH}login"
        style="display:block; text-align:center; font-size:15px; font-weight:700; width:100%; margin-top:20px; padding:12px 24px; background:#0157a4; color:#fff; border-radius:6px; text-decoration:none; box-sizing:border-box;">
-       Visiter la plateforme
+       ${copy.visit}
       </a>
 
       <p class="warning">
-        ⚠️ Pour des raisons de sécurité, veuillez changer votre mot de passe
-        dès votre première connexion.
+        ${copy.warning}
       </p>
     </div>
   </body>
 </html>
 `;
+};

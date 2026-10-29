@@ -12,8 +12,10 @@ import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { OrderShippingAddress } from './entities/order-shipping-address.entity';
 import { ProductVariant } from 'src/modules/product/entities/product-variant.entity';
+import { Product } from 'src/modules/product/entities/product.entity';
 import { Address } from 'src/modules/users/entities/address.entity';
 import { PhoneNumber } from 'src/modules/users/entities/phone-number.entity';
+import { Users } from 'src/modules/users/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { BulkUpdateOrderStatusDto } from './dto/bulk-update-order-status.dto';
@@ -22,6 +24,7 @@ import { OrderQueryDto } from './dto/order-query.dto';
 import { generateOrderNumber, applyDiscount } from 'src/shared/utils/utils';
 import { OrderCreatedEvent } from './events/order-created.event';
 import { OrderStatusUpdatedEvent } from './events/order-status-updated.event';
+import { ContentTranslationService } from 'src/shared/node/content-translation.service';
 
 @Injectable()
 export class OrderService {
@@ -32,7 +35,34 @@ export class OrderService {
     @InjectRepository(Order)
     private readonly _orderRepo: Repository<Order>,
     private readonly eventEmitter: EventEmitter2,
+    private readonly _translationService: ContentTranslationService,
   ) {}
+
+  private async attachOrderProductTranslations(orders: Order[]): Promise<Order[]> {
+    const products = orders
+      .flatMap((order) => order.items ?? [])
+      .map((item) => item.productVariant?.product)
+      .filter((product): product is Product => Boolean(product));
+    if (!products.length) return orders;
+
+    const translatedProducts = await this._translationService.attach(
+      'product',
+      [...new Map(products.map((product) => [product.id, product])).values()],
+    );
+    const productsById = new Map(
+      translatedProducts.map((product) => [product.id, product]),
+    );
+
+    for (const order of orders) {
+      for (const item of order.items ?? []) {
+        const product = item.productVariant?.product;
+        if (product) {
+          item.productVariant.product = productsById.get(product.id) ?? product;
+        }
+      }
+    }
+    return orders;
+  }
 
   // @desc Create a new order
   // @route POST /order
@@ -195,6 +225,7 @@ export class OrderService {
       const order = queryRunner.manager.create(Order, {
         orderNumber: await generateOrderNumber(queryRunner),
         total,
+        emailLanguage: createOrderDto.language ?? 'en',
         user: userId ? { id: userId } : null,
         guestEmail: isGuest ? createOrderDto.guestEmail : null,
         guestFirstName: isGuest ? createOrderDto.guestFirstName : null,
@@ -204,12 +235,29 @@ export class OrderService {
       });
 
       await queryRunner.manager.save(Order, order);
-      const recipientEmail = isGuest ? createOrderDto.guestEmail : null;
+      const customer = userId
+        ? await queryRunner.manager.findOne(Users, { where: { id: userId } })
+        : null;
+      const recipientEmail = isGuest
+        ? createOrderDto.guestEmail
+        : customer?.email;
       const customerName = isGuest
         ? `${createOrderDto.guestFirstName} ${createOrderDto.guestLastName}`
-        : null;
+        : customer
+          ? `${customer.firstName} ${customer.lastName}`
+          : null;
 
       if (recipientEmail) {
+        const emailLanguage = createOrderDto.language ?? 'en';
+        const translatedProducts = await this._translationService.attach(
+          'product',
+          orderItems
+            .map((item) => item.productVariant?.product)
+            .filter((product): product is Product => Boolean(product)),
+        );
+        const productsById = new Map(
+          translatedProducts.map((product) => [product.id, product]),
+        );
         let savings = 0;
         const emailItems = orderItems.map((item) => {
           const unit = Number(item.price) || 0;
@@ -219,9 +267,13 @@ export class OrderService {
           if (hasSaving) {
             savings += (originalUnit - unit) * item.quantity;
           }
+          const product = item.productVariant?.product;
+          const productName = product
+            ? productsById.get(product.id)?.translations?.[emailLanguage]?.name || product.name
+            : null;
           return {
-            productName: item.productVariant?.product?.name
-              ? `${item.productVariant.product.name} ${item.productVariant.size || ''}`.trim()
+            productName: productName
+              ? `${productName} ${item.productVariant?.size || ''}`.trim()
               : item.productVariant?.size || 'Item',
             quantity: item.quantity,
             priceTTC: Math.round(unit * item.quantity * 100) / 100,
@@ -232,6 +284,7 @@ export class OrderService {
         });
 
         orderCreatedEvent = new OrderCreatedEvent(order.id, recipientEmail, {
+          language: emailLanguage,
           ref: order.orderNumber,
           clientName: customerName,
           items: emailItems,
@@ -286,6 +339,7 @@ export class OrderService {
       .take(limit);
 
     const [data, total] = await qb.getManyAndCount();
+    await this.attachOrderProductTranslations(data);
 
     return {
       message: 'Orders retrieved successfully.',
@@ -331,6 +385,7 @@ export class OrderService {
     qb.orderBy('order.createdAt', 'DESC').skip(skip).take(limit);
 
     const [data, total] = await qb.getManyAndCount();
+    await this.attachOrderProductTranslations(data);
 
     return {
       message: 'Orders retrieved successfully.',
@@ -362,6 +417,8 @@ export class OrderService {
     if (!order) {
       throw new NotFoundException(`Order with ID "${orderId}" not found.`);
     }
+
+    await this.attachOrderProductTranslations([order]);
 
     return {
       message: 'Order retrieved successfully.',
@@ -435,6 +492,7 @@ export class OrderService {
       this.eventEmitter.emit(
         'order.status.updated',
         new OrderStatusUpdatedEvent(order.id, recipientEmail, {
+          language: order.emailLanguage ?? 'en',
           ref: order.orderNumber,
           clientName: customerName,
           status: order.status,

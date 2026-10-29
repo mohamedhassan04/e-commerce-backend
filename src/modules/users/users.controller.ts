@@ -125,7 +125,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Send forgot password code' })
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.usersService.forgotPassword(dto.email);
+    return this.usersService.forgotPassword(dto.email, dto.language);
   }
 
   //@Method POST

@@ -10,8 +10,13 @@ export class ContentTranslationService {
     private readonly _translationRepo: Repository<ContentTranslation>,
   ) {}
 
-  async attach<T extends { id: string }>(contentType: string, items: T[]) {
-    if (!items.length) return items;
+  async attach<T extends { id: string }>(
+    contentType: string,
+    items: T[],
+  ): Promise<
+    Array<T & { translations: Record<string, Record<string, string | null>> }>
+  > {
+    if (!items.length) return [];
     const rows = await this._translationRepo.find({
       where: { contentType, contentId: In(items.map(({ id }) => id)) },
     });
