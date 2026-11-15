@@ -12,6 +12,7 @@ import { setupSwagger } from './shared/swagger/setup';
 import { ThrottleExceptionFilter } from './shared/filters/throttle-exception.filter';
 import { configService as config } from './config/config.service';
 import { join } from 'path';
+import { mkdirSync } from 'fs';
 
 async function bootstrap() {
   await createDatabaseIfNotExists();
@@ -53,8 +54,11 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Serve static files from uploads folder
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+  const uploadsDir = process.env.UPLOADS_DIR || join(process.cwd(), 'uploads');
+  mkdirSync(uploadsDir, { recursive: true });
+
+  // Serve static files from the same persistent directory used by Multer.
+  app.useStaticAssets(uploadsDir, {
     prefix: '/uploads',
     setHeaders: (res) => {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');

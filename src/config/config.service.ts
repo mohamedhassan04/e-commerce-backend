@@ -88,7 +88,7 @@ class ConfigService {
       // Specify the location of migration files
       migrations: [__dirname + 'src/migration/*.ts'],
       autoLoadEntities: true,
-      synchronize: true,
+      synchronize: false,
       migrationsRun: true, // Run migrations automatically
 
       // Enable SSL in production environment

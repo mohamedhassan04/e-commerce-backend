@@ -9,6 +9,7 @@ async function createDatabaseIfNotExists() {
     port: parseInt(configService.get<string>('POSTGRES_PORT')),
     user: configService.get<string>('POSTGRES_USER'),
     password: configService.get<string>('POSTGRES_PASSWORD'),
+    database: 'postgres',
   });
   const databaseName = configService.get<string>('POSTGRES_DATABASE');
 
@@ -20,7 +21,8 @@ async function createDatabaseIfNotExists() {
     );
 
     if (result.rowCount === 0) {
-      await client.query(`CREATE DATABASE "${databaseName}"`);
+      const escapedDatabaseName = databaseName.replace(/"/g, '""');
+      await client.query(`CREATE DATABASE "${escapedDatabaseName}"`);
     } else {
       return;
     }

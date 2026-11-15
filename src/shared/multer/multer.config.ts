@@ -1,10 +1,15 @@
 import { Options } from 'multer';
 import { diskStorage } from 'multer';
 import { v4 as uuid } from 'uuid';
+import { mkdirSync } from 'fs';
+import { join } from 'path';
+
+const uploadsDir = process.env.UPLOADS_DIR || join(process.cwd(), 'uploads');
+mkdirSync(uploadsDir, { recursive: true });
 
 export const multerConfig: Options = {
   storage: diskStorage({
-    destination: './uploads',
+    destination: uploadsDir,
     filename: (req, file, cb) => {
       const uniqueName = `${uuid()}.webp`;
       cb(null, uniqueName);
