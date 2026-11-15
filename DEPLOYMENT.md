@@ -1,6 +1,6 @@
 # VPS deployment
 
-This setup builds the Mamolej NestJS API with Node.js 26.3 on port 8080, runs PostgreSQL and Nginx in Docker, and stores uploaded images on the VPS host.
+This setup builds the Mamolej NestJS API with Node.js 26.12.1 on port 8080, runs PostgreSQL and Nginx in Docker, and stores uploaded images on the VPS host.
 
 ## 1. Prepare the VPS
 
