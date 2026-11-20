@@ -30,6 +30,7 @@ async function bootstrap() {
   // Get port from environment variables
   const port = configService.get<number>('PORT');
   const frontendPath = configService.get<string>('FRONTEND_PATH');
+  const backendPath = configService.get<string>('BACKEND_URL');
 
   app.use(json({ limit: '20mb' }));
   app.use(urlencoded({ extended: true, limit: '20mb' }));
@@ -43,7 +44,7 @@ async function bootstrap() {
   // Enable CORS before static assets so /uploads routes get CORS headers
   app.enableCors({
     origin: (origin, callback) => {
-      const allowed = [frontendPath, 'http://localhost:8080'];
+      const allowed = [frontendPath, backendPath, 'http://localhost:8080'];
       if (!origin || allowed.includes(origin)) {
         callback(null, true);
       } else {

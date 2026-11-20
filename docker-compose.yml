@@ -8,19 +8,22 @@ services:
     image: mamolej-api:latest
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.prod
     environment:
       NODE_ENV: production
       PORT: 8080
       UPLOADS_DIR: /app/uploads
     ports:
       - "127.0.0.1:8080:8080"
+    networks:
+      - api_egress
+      - database_private
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - type: bind
-        source: ${UPLOADS_HOST_PATH:-./uploads}
+        source: /srv/mamolej/uploads
         target: /app/uploads
     read_only: true
     tmpfs:
@@ -33,12 +36,12 @@ services:
   postgres:
     image: postgres:17-bookworm
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: ${POSTGRES_DATABASE:?Set POSTGRES_DATABASE in .env}
+    env_file:
+      - .env.prod
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - database_private
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 10s
@@ -50,3 +53,14 @@ services:
 
 volumes:
   postgres_data:
+    name: mamolej_postgres_data
+    driver: local
+
+networks:
+  api_egress:
+    name: mamolej_api_egress
+    driver: bridge
+  database_private:
+    name: mamolej_database_private
+    driver: bridge
+    internal: true

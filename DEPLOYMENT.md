@@ -12,7 +12,7 @@ sudo chown 1000:1000 /srv/mamolej/uploads
 sudo chmod 0755 /srv/mamolej/uploads
 ```
 
-Copy `.env.example` to `.env`, then replace all sample credentials and URLs. Keep `.env` private (`chmod 600 .env`). Keep `UPLOADS_HOST_PATH` set to `/srv/mamolej/uploads` to match the Nginx `alias` path below. If you choose another uploads path, update both settings. `POSTGRES_HOST` must remain `postgres`, the Compose service name. Use a long random password for PostgreSQL and independent random values for both JWT secrets.
+Copy `.env.example` to `.env.prod`, then replace all sample credentials and URLs. Docker Compose reads this production file for both the API and PostgreSQL; it does not use `.env`. Keep `.env.prod` private (`chmod 600 .env.prod`). The uploads bind mount uses `/srv/mamolej/uploads`, which must match the Nginx `alias` path below. `POSTGRES_HOST` must remain `postgres`, the Compose service name. Set `POSTGRES_DB` to the same database name as `POSTGRES_DATABASE`; the first is used by the PostgreSQL container and the second by NestJS. Use a long random password for PostgreSQL and independent random values for both JWT secrets.
 
 The app requires SMTP settings at startup. Fill in the values for your mail provider even if you are not testing email yet. Make sure `FRONTEND_PATH` matches the browser origin exactly, including the scheme. Host Nginx needs read access to the public image files, hence the uploads directory's readable mode.
 
@@ -43,7 +43,7 @@ docker compose ps
 docker compose logs -f api
 ```
 
-The API routes are reachable through host Nginx at `https://www.mamolej.cz/api/...`. Nginx serves uploaded files directly at `/uploads/...` from `UPLOADS_HOST_PATH`. Docker publishes the API only at `127.0.0.1:8080`; PostgreSQL has no published port and its data persists in the `postgres_data` Docker volume.
+The API routes are reachable through host Nginx at `https://www.mamolej.cz/api/...`. Nginx serves uploaded files directly at `/uploads/...` from `/srv/mamolej/uploads`. Docker publishes the API only at `127.0.0.1:8080`; PostgreSQL has no published port. The API reaches PostgreSQL over the internal-only `database_private` network, while `api_egress` lets the API reach services such as SMTP. PostgreSQL data persists in the explicitly named `mamolej_postgres_data` local Docker volume.
 
 This stack does not contain the frontend: the Nginx site's `/` route returns 404 until the frontend is configured there or routed to its own upstream.
 
