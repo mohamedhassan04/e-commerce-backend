@@ -44,7 +44,7 @@ async function bootstrap() {
   // Enable CORS before static assets so /uploads routes get CORS headers
   app.enableCors({
     origin: (origin, callback) => {
-      const allowed = [frontendPath, backendPath, 'http://localhost:8080'];
+      const allowed = [frontendPath, `${backendPath}:${port}`];
       if (!origin || allowed.includes(origin)) {
         callback(null, true);
       } else {
