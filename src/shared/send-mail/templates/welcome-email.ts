@@ -10,7 +10,7 @@ export const getEmailWelcomeTemplate = (
   const copy = isCzech
     ? {
         eyebrow: 'VÁŠ ÚČET',
-        title: 'Vítejte ve Verdant & Co.',
+        title: 'Vítejte v Mamolej.',
         greeting: 'Dobrý den',
         message: 'Váš účet je připraven. Níže najdete své přihlašovací údaje.',
         email: 'E-mail',
@@ -20,7 +20,7 @@ export const getEmailWelcomeTemplate = (
       }
     : {
         eyebrow: 'YOUR ACCOUNT',
-        title: 'Welcome to Verdant & Co.',
+        title: 'Welcome to Mamolej.',
         greeting: 'Hello',
         message: 'Your account is ready. Here are your sign-in details.',
         email: 'Email',

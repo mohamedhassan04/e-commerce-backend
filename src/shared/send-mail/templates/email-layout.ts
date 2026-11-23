@@ -13,8 +13,8 @@ export function renderEmailLayout({
 }: EmailLayoutOptions): string {
   const isCzech = language === 'cz';
   const footer = isCzech
-    ? 'S péčí připraveno společností Verdant & Co.'
-    : 'Thoughtfully prepared by Verdant & Co.';
+    ? 'S péčí připraveno společností Mamolej.'
+    : 'Thoughtfully prepared by Mamolej.';
 
   return `
 <!DOCTYPE html>
@@ -44,7 +44,7 @@ export function renderEmailLayout({
           </tr>
           <tr>
             <td style="padding:23px 34px;background:#1d3124;">
-              <p style="margin:0;color:#faf9f1;font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;letter-spacing:1.4px;">VERDANT <span style="color:#bacec1;">&amp; CO.</span></p>
+              <p style="margin:0;color:#faf9f1;font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;letter-spacing:1.4px;">MAMOLEJ</p>
             </td>
           </tr>
           <tr>
