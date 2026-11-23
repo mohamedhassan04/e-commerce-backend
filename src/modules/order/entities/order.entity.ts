@@ -4,6 +4,7 @@ import { Users } from 'src/modules/users/entities/user.entity';
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -13,8 +14,9 @@ import { OrderItem } from './order-item.entity';
 import { OrderShippingAddress } from './order-shipping-address.entity';
 
 @Entity('tb_orders')
+@Index(['orderNumber'], { unique: true })
 export class Order extends Node {
-  @Column({ name: 'order_number', type: 'varchar', length: 20, unique: true })
+  @Column({ name: 'order_number', type: 'varchar', length: 30, unique: true })
   orderNumber: string;
 
   @Column({
@@ -34,10 +36,20 @@ export class Order extends Node {
   @Column({ name: 'guest_email', type: 'varchar', length: 255, nullable: true })
   guestEmail: string | null;
 
-  @Column({ name: 'guest_first_name', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'guest_first_name',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   guestFirstName: string | null;
 
-  @Column({ name: 'guest_last_name', type: 'varchar', length: 100, nullable: true })
+  @Column({
+    name: 'guest_last_name',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
   guestLastName: string | null;
 
   @OneToOne(

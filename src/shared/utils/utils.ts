@@ -1,44 +1,5 @@
-import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { configService } from 'src/config/config.service';
-
-interface GenerateNumeroOptions<T> {
-  repo: Repository<T>;
-  dateColumn: string; // e.g. 'paymentDate', 'createdAt'
-  numberColumn: string; // e.g. 'invoiceNo', 'orderNo'
-  padding?: number; // default 3
-}
-
-export async function generateNumero<T>(
-  options: GenerateNumeroOptions<T>,
-): Promise<string> {
-  const { repo, dateColumn, numberColumn, padding = 3 } = options;
-
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-
-  const lastItem = await repo
-    .createQueryBuilder('e')
-    .withDeleted()
-    .where(`EXTRACT(YEAR FROM e.${dateColumn}) = :year`, { year })
-    .andWhere(`EXTRACT(MONTH FROM e.${dateColumn}) = :month`, {
-      month: Number(month),
-    })
-    .orderBy(`e.${numberColumn}`, 'DESC')
-    .getOne();
-
-  let sequence = 1;
-
-  if (lastItem?.[numberColumn]) {
-    const parts = String(lastItem[numberColumn]).split('-');
-    sequence = parseInt(parts[2], 10) + 1;
-  }
-
-  const seqStr = String(sequence).padStart(padding, '0');
-
-  return `${year}-${month}-${seqStr}`;
-}
 
 export const generateResetCode = (length = 10): string => {
   const chars =
@@ -75,15 +36,48 @@ export function formatImageUrl(url: string): string {
   return `${configService.backendUrl}${url}`;
 }
 
+/**
+ * Unambiguous alphabet (no 0/O, 1/I) for human-readable public identifiers.
+ * 32 symbols × 6 positions = 32^6 ≈ 1.07 billion combinations per month.
+ */
+const ORDER_NUMBER_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+const ORDER_NUMBER_SUFFIX_LENGTH = 6;
+const ORDER_NUMBER_MAX_ATTEMPTS = 10;
+
+/**
+ * Cryptographically strong, unbiased random suffix.
+ * `crypto.randomInt` uses rejection sampling, so every symbol has the same
+ * probability (unlike `randomBytes()[i] % alphabet.length` or `Math.random()`).
+ */
+function randomOrderSuffix(length = ORDER_NUMBER_SUFFIX_LENGTH): string {
+  return Array.from(
+    { length },
+    () => ORDER_NUMBER_ALPHABET[crypto.randomInt(ORDER_NUMBER_ALPHABET.length)],
+  ).join('');
+}
+
 export async function generateOrderNumber(queryRunner: {
-  query: (sql: string) => Promise<any[]>;
+  query: (sql: string, parameters?: any[]) => Promise<any>;
 }): Promise<string> {
-  const result = await queryRunner.query(
-    `SELECT nextval('order_number_seq') AS nextval`,
-  );
-  const seq = Number(result[0].nextval);
-  const year = new Date().getFullYear();
-  return `ORD-${year}-${String(seq).padStart(6, '0')}`;
+  const now = new Date();
+  const period = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(
+    2,
+    '0',
+  )}`;
+
+  for (let attempt = 0; attempt < ORDER_NUMBER_MAX_ATTEMPTS; attempt++) {
+    const orderNumber = `ORD-${period}-${randomOrderSuffix()}`;
+
+    // Idempotent pre-check; the UNIQUE constraint on order_number still
+    // guarantees correctness if two requests race.
+    const existing = await queryRunner.query(
+      'SELECT 1 FROM tb_orders WHERE order_number = $1 LIMIT 1',
+      [orderNumber],
+    );
+    if (!existing?.length) return orderNumber;
+  }
+
+  throw new Error('Unable to generate a unique order number.');
 }
 
 export function formatProductImages<T extends { images?: { url: string }[] }>(
