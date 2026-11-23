@@ -529,8 +529,10 @@ export class OrderService {
       .withDeleted()
       .leftJoinAndSelect('order.items', 'items')
       .leftJoinAndSelect('items.productVariant', 'productVariant')
+      .leftJoin('order.user', 'user')
+      .addSelect(['user.id', 'user.firstName', 'user.lastName', 'user.email'])
       .where('order.id = :orderId', { orderId })
-      .andWhere('order.user.id = :userId', { userId })
+      .andWhere('user.id = :userId', { userId })
       .getOne();
 
     if (!order) {
@@ -563,6 +565,8 @@ export class OrderService {
       order.status = 'CANCELLED' as any;
       await queryRunner.manager.save(Order, order);
       await queryRunner.commitTransaction();
+
+      this.emitOrderStatusUpdated(order);
 
       return {
         message: 'Order cancelled successfully.',

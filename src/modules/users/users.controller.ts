@@ -3,6 +3,7 @@ import {
   Get,
   Body,
   Param,
+  ParseUUIDPipe,
   Put,
   Patch,
   Delete,
@@ -179,13 +180,26 @@ export class UsersController {
   }
 
   //@Method GET
+  //@desc Get a user by id with addresses and phone numbers (admin)
+  //@Path: /users/admin/:id
+  @ApiOperation({ summary: 'Get one user by id (ADMIN role only)' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @Get('admin/:id')
+  findUserByIdForAdmin(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.findUserById(id);
+  }
+
+  //@Method GET
   //@desc Get a user by id
   //@Path: /users/:id
   @ApiOperation({ summary: 'Get One User' })
+  @ApiParam({ name: 'id', description: 'User ID' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('USER')
   @Get(':id')
-  findOneUser(@Param('id') id: string) {
+  findOneUser(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.findUserById(id);
   }
 }

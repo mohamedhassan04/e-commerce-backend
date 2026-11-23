@@ -55,7 +55,8 @@ export class OrderController {
 
   @ApiOperation({ summary: 'Get current user orders' })
   @ApiResponse({ status: 200, description: 'Orders retrieved successfully.' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('USER')
   @Get('my-orders')
   findMyOrders(@Query() query: ProductQueryDto, @GetUser() user: Users) {
     return this.orderService.findUserOrders(user.id, query);
@@ -85,7 +86,8 @@ export class OrderController {
   @ApiOperation({ summary: 'Get order by ID' })
   @ApiNotFoundResponse({ description: 'Order not found' })
   @ApiResponse({ status: 200, description: 'Order retrieved successfully.' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'USER')
   @Get(':id')
   findOrderById(@Param('id') id: string) {
     return this.orderService.findOrderById(id);
@@ -110,7 +112,8 @@ export class OrderController {
   @ApiOperation({ summary: 'Cancel pending order' })
   @ApiNotFoundResponse({ description: 'Order not found' })
   @ApiResponse({ status: 200, description: 'Order cancelled successfully.' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'USER')
   @Patch(':id/cancel')
   cancelOrder(@Param('id') id: string, @GetUser() user: Users) {
     return this.orderService.cancelOrder(id, user.id);
