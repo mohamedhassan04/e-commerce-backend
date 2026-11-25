@@ -27,6 +27,18 @@ export class Users extends Node {
   @Column({ name: 'is_verified', default: false, type: 'boolean' })
   isVerified: boolean;
 
+  @Column({ name: 'terms_accepted_at', type: 'timestamptz', nullable: true })
+  termsAcceptedAt: Date | null;
+
+  @Column({ name: 'terms_version', type: 'varchar', length: 20, nullable: true })
+  termsVersion: string | null;
+
+  @Column({ name: 'privacy_accepted_at', type: 'timestamptz', nullable: true })
+  privacyAcceptedAt: Date | null;
+
+  @Column({ name: 'privacy_version', type: 'varchar', length: 20, nullable: true })
+  privacyVersion: string | null;
+
   @Column({ name: 'verification_code', type: 'varchar', nullable: true })
   verificationCode: string;
 

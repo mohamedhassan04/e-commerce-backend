@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
+  IsBoolean,
+  Equals,
   IsIn,
   IsNotEmpty,
   IsOptional,
@@ -11,6 +13,16 @@ import {
 } from 'class-validator';
 
 export class CreateUserDto {
+  @ApiProperty({ type: Boolean, example: true, description: 'Acceptance of the current terms and conditions is required' })
+  @IsBoolean()
+  @Equals(true)
+  termsAccepted: boolean;
+
+  @ApiProperty({ type: Boolean, example: true, description: 'Acceptance of the current privacy policy is required' })
+  @IsBoolean()
+  @Equals(true)
+  privacyAccepted: boolean;
+
   @ApiPropertyOptional({ enum: ['cz', 'en'], description: 'Language for account emails' })
   @IsOptional()
   @IsIn(['cz', 'en'])

@@ -21,6 +21,10 @@ import { EmailService } from 'src/shared/send-mail/mail.service';
 import { UserQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
+import {
+  CURRENT_PRIVACY_VERSION,
+  CURRENT_TERMS_VERSION,
+} from './legal-consent.constants';
 
 @Injectable()
 export class UsersService {
@@ -34,6 +38,12 @@ export class UsersService {
   // @route POST /auth/register
   async register(createUserDto: CreateUserDto) {
     try {
+      if (!createUserDto.termsAccepted || !createUserDto.privacyAccepted) {
+        throw new BadRequestException(
+          'Acceptance of the current terms and privacy policy is required.',
+        );
+      }
+
       const existingUser = await this._userRepo.findOne({
         where: { email: createUserDto.email },
       });
@@ -44,9 +54,16 @@ export class UsersService {
       const salt = await bcrypt.genSalt(12);
       const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
 
+      const acceptedAt = new Date();
       const user = this._userRepo.create({
-        ...createUserDto,
+        firstName: createUserDto.firstName,
+        lastName: createUserDto.lastName,
+        email: createUserDto.email,
         password: hashedPassword,
+        termsAcceptedAt: acceptedAt,
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyAcceptedAt: acceptedAt,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
       });
 
       await this._userRepo.save(user);
@@ -442,6 +459,10 @@ export class UsersService {
         'user.isActive',
         'user.isVerified',
         'user.createdAt',
+        'user.termsAcceptedAt',
+        'user.termsVersion',
+        'user.privacyAcceptedAt',
+        'user.privacyVersion',
       ])
       .where('user.role = :role', { role: 'USER' });
 

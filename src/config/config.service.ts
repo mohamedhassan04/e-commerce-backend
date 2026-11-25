@@ -2,6 +2,7 @@
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ThrottlerModuleOptions } from '@nestjs/throttler';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { join } from 'path';
 import { ISwaggerConfigInterface } from 'src/shared/swagger/swagger-config.interface';
 
 // Load environment variables from a .env file
@@ -86,7 +87,9 @@ class ConfigService {
       migrationsTableName: 'migration',
 
       // Specify the location of migration files
-      migrations: [__dirname + 'src/migration/*.ts'],
+      migrations: [
+        join(__dirname, '..', 'modules', '**', '*.migration.{js,ts}'),
+      ],
       autoLoadEntities: true,
       synchronize: false,
       migrationsRun: true, // Run migrations automatically
