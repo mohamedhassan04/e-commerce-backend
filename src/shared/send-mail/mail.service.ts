@@ -8,6 +8,14 @@ import {
   getOrderStatusUpdateTemplate,
   OrderStatusUpdateEmailData,
 } from './templates/order-status-update';
+import {
+  getWithdrawCustomerEmailTemplate,
+  WithdrawCustomerEmailData,
+} from './templates/withdraw-customer';
+import {
+  getWithdrawAdminEmailTemplate,
+  WithdrawAdminEmailData,
+} from './templates/withdraw-admin';
 
 @Injectable()
 export class EmailService {
@@ -72,6 +80,25 @@ export class EmailService {
       to,
       subject: `${data.language === 'cz' ? 'Potvrzení objednávky' : 'Order Confirmation'} - ${data.ref}`,
       html: getOrderEmailTemplate(data),
+    });
+  }
+
+  async sendWithdrawCustomerEmail(
+    to: string,
+    data: WithdrawCustomerEmailData,
+  ) {
+    await this.mailerService.sendMail({
+      to,
+      subject: `${data.language === 'cz' ? 'Potvrzení odstoupení od smlouvy' : 'Withdrawal request confirmation'} - ${data.orderNumber}`,
+      html: getWithdrawCustomerEmailTemplate(data),
+    });
+  }
+
+  async sendWithdrawAdminEmail(to: string, data: WithdrawAdminEmailData) {
+    await this.mailerService.sendMail({
+      to,
+      subject: `${data.language === 'cz' ? 'Nová žádost o odstoupení od smlouvy' : 'New withdrawal request'} - ${data.orderNumber}`,
+      html: getWithdrawAdminEmailTemplate(data),
     });
   }
 }

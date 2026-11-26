@@ -27,6 +27,9 @@ export class Order extends Node {
   })
   status: OrderStatus;
 
+  @Column({ name: 'delivered_at', type: 'timestamp', nullable: true })
+  deliveredAt: Date | null;
+
   @Column({ name: 'email_language', type: 'varchar', length: 2, default: 'en' })
   emailLanguage: 'cz' | 'en';
 

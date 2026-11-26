@@ -11,6 +11,12 @@ export enum OrderStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export enum WithdrawStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
 export enum StatsRange {
   DAYS_7 = '7',
   DAYS_30 = '30',

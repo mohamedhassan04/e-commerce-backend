@@ -7,6 +7,7 @@ import { PromoPopupModule } from 'src/modules/promo-popup/promo-popup.module';
 import { PromoSectionModule } from 'src/modules/promo-section/promo-section.module';
 import { StatsModule } from 'src/modules/stats/stats.module';
 import { UsersModule } from 'src/modules/users/users.module';
+import { WithdrawModule } from 'src/modules/withdraw/withdraw.module';
 
 export const AllModules = [
   AuthenticationModule,
@@ -18,4 +19,5 @@ export const AllModules = [
   PromoPopupModule,
   PromoSectionModule,
   StatsModule,
+  WithdrawModule,
 ];

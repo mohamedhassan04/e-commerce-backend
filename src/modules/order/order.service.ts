@@ -26,6 +26,7 @@ import { generateOrderNumber, applyDiscount } from 'src/shared/utils/utils';
 import { OrderCreatedEvent } from './events/order-created.event';
 import { OrderStatusUpdatedEvent } from './events/order-status-updated.event';
 import { ContentTranslationService } from 'src/shared/node/content-translation.service';
+import { OrderStatus } from 'src/shared/enum/enum.type';
 
 @Injectable()
 export class OrderService {
@@ -39,7 +40,9 @@ export class OrderService {
     private readonly _translationService: ContentTranslationService,
   ) {}
 
-  private async attachOrderProductTranslations(orders: Order[]): Promise<Order[]> {
+  private async attachOrderProductTranslations(
+    orders: Order[],
+  ): Promise<Order[]> {
     const products = orders
       .flatMap((order) => order.items ?? [])
       .map((item) => item.productVariant?.product)
@@ -75,16 +78,24 @@ export class OrderService {
         throw new BadRequestException('Email is required for guest checkout.');
       }
       if (!createOrderDto.guestFirstName) {
-        throw new BadRequestException('First name is required for guest checkout.');
+        throw new BadRequestException(
+          'First name is required for guest checkout.',
+        );
       }
       if (!createOrderDto.guestLastName) {
-        throw new BadRequestException('Last name is required for guest checkout.');
+        throw new BadRequestException(
+          'Last name is required for guest checkout.',
+        );
       }
       if (createOrderDto.addressId) {
-        throw new BadRequestException('Guests cannot use saved addresses. Please provide a manualAddress.');
+        throw new BadRequestException(
+          'Guests cannot use saved addresses. Please provide a manualAddress.',
+        );
       }
       if (createOrderDto.phoneNumberId) {
-        throw new BadRequestException('Guests cannot use saved phone numbers. Please provide a phone number in manualAddress.');
+        throw new BadRequestException(
+          'Guests cannot use saved phone numbers. Please provide a phone number in manualAddress.',
+        );
       }
     }
 
@@ -270,7 +281,8 @@ export class OrderService {
           }
           const product = item.productVariant?.product;
           const productName = product
-            ? productsById.get(product.id)?.translations?.[emailLanguage]?.name || product.name
+            ? productsById.get(product.id)?.translations?.[emailLanguage]
+                ?.name || product.name
             : null;
           return {
             productName: productName
@@ -319,11 +331,15 @@ export class OrderService {
   }
 
   async validateCartStock(dto: ValidateCartStockDto) {
-    const variant = await this._dataSource.getRepository(ProductVariant).findOne({
-      where: { id: dto.productVariantId },
-    });
+    const variant = await this._dataSource
+      .getRepository(ProductVariant)
+      .findOne({
+        where: { id: dto.productVariantId },
+      });
     if (!variant) {
-      throw new NotFoundException('This product option is no longer available.');
+      throw new NotFoundException(
+        'This product option is no longer available.',
+      );
     }
 
     return {
@@ -456,6 +472,9 @@ export class OrderService {
     }
 
     order.status = dto.status;
+    if (dto.status === OrderStatus.DELIVERED) {
+      order.deliveredAt = new Date();
+    }
     await this._orderRepo.save(order);
     this.emitOrderStatusUpdated(order);
 
@@ -481,6 +500,9 @@ export class OrderService {
 
     for (const order of orders) {
       order.status = dto.status;
+      if (dto.status === OrderStatus.DELIVERED) {
+        order.deliveredAt = new Date();
+      }
     }
 
     await this._orderRepo.save(orders);
