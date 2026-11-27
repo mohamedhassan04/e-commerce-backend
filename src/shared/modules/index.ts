@@ -1,5 +1,6 @@
 import { AuthenticationModule } from 'src/modules/auth/auth.module';
 import { CategoryModule } from 'src/modules/category/category.module';
+import { ContactsModule } from 'src/modules/contacts/contacts.module';
 import { HeroSectionModule } from 'src/modules/hero-section/hero-section.module';
 import { OrderModule } from 'src/modules/order/order.module';
 import { ProductModule } from 'src/modules/product/product.module';
@@ -20,4 +21,5 @@ export const AllModules = [
   PromoSectionModule,
   StatsModule,
   WithdrawModule,
+  ContactsModule,
 ];

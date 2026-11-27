@@ -16,6 +16,10 @@ import {
   getWithdrawAdminEmailTemplate,
   WithdrawAdminEmailData,
 } from './templates/withdraw-admin';
+import {
+  getContactAdminEmailTemplate,
+  ContactAdminEmailData,
+} from './templates/contact-admin';
 
 @Injectable()
 export class EmailService {
@@ -113,6 +117,15 @@ export class EmailService {
       to,
       subject: `${data.language === 'cz' ? 'Nová žádost o odstoupení od smlouvy' : 'New withdrawal request'} - ${data.orderNumber}`,
       html: getWithdrawAdminEmailTemplate(data),
+    });
+  }
+
+  async sendContactAdminEmail(to: string, data: ContactAdminEmailData) {
+    await this.mailerService.sendMail({
+      to,
+      replyTo: data.email,
+      subject: `${data.language === 'cz' ? 'Nová zpráva z kontaktního formuláře' : 'New message from the contact form'} - ${data.name}`,
+      html: getContactAdminEmailTemplate(data),
     });
   }
 }
