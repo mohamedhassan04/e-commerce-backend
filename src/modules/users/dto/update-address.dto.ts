@@ -14,13 +14,13 @@ export class UpdateAddressDto {
 
   @ApiPropertyOptional({
     type: 'string',
-    example: 'Apt 4B',
-    description: 'Apt / suite',
+    example: '123',
+    description: 'Street number',
   })
   @IsOptional()
   @IsString()
-  @MaxLength(255)
-  apt?: string;
+  @MaxLength(20)
+  streetNumber?: string;
 
   @ApiPropertyOptional({
     type: 'string',
@@ -34,16 +34,6 @@ export class UpdateAddressDto {
 
   @ApiPropertyOptional({
     type: 'string',
-    example: 'NY',
-    description: 'State',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  state?: string;
-
-  @ApiPropertyOptional({
-    type: 'string',
     example: '10001',
     description: 'Zip code',
   })
@@ -51,16 +41,6 @@ export class UpdateAddressDto {
   @IsString()
   @MaxLength(20)
   zipCode?: string;
-
-  @ApiPropertyOptional({
-    type: 'string',
-    example: 'USA',
-    description: 'Country',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  country?: string;
 
   @ApiPropertyOptional({
     type: 'boolean',

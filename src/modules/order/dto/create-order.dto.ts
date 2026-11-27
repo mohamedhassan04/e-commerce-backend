@@ -37,17 +37,17 @@ export class ManualAddressDto {
   @MaxLength(255)
   street: string;
 
+  @ApiProperty({ example: '123' })
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(20)
+  streetNumber: string;
+
   @ApiProperty({ example: 'New York' })
   @IsNotEmpty()
   @IsString()
   @MaxLength(100)
   city: string;
-
-  @ApiProperty({ example: 'NY' })
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(100)
-  state: string;
 
   @ApiProperty({ example: '10001' })
   @IsNotEmpty()
@@ -55,17 +55,11 @@ export class ManualAddressDto {
   @MaxLength(20)
   zipCode: string;
 
-  @ApiProperty({ example: 'USA' })
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(100)
-  country: string;
-
-  @ApiProperty({ example: '+1234567890' })
-  @IsNotEmpty()
+  @ApiPropertyOptional({ example: '+1234567890' })
+  @IsOptional()
   @IsString()
   @MaxLength(20)
-  phoneNumber: string;
+  phoneNumber?: string;
 }
 
 @ValidatorConstraint({ name: 'AddressValidation', async: false })
@@ -133,6 +127,15 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   phoneNumberId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Manual phone number (use if the user enters a phone number manually)',
+    example: '+1234567890',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  phoneNumber?: string;
 
   @ApiPropertyOptional({
     description: 'Guest email (required for guest checkout)',

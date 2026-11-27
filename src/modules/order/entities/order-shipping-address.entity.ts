@@ -7,17 +7,14 @@ export class OrderShippingAddress extends Node {
   @Column({ name: 'street', type: 'varchar', length: 255 })
   street: string;
 
+  @Column({ name: 'street_number', type: 'varchar', length: 20 })
+  streetNumber: string;
+
   @Column({ name: 'city', type: 'varchar', length: 100 })
   city: string;
 
-  @Column({ name: 'state', type: 'varchar', length: 100 })
-  state: string;
-
   @Column({ name: 'zip_code', type: 'varchar', length: 20 })
   zipCode: string;
-
-  @Column({ name: 'country', type: 'varchar', length: 100 })
-  country: string;
 
   @Column({ name: 'phone_number', type: 'varchar', length: 20 })
   phoneNumber: string;

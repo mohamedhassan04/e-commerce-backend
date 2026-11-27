@@ -94,7 +94,7 @@ export class OrderService {
       }
       if (createOrderDto.phoneNumberId) {
         throw new BadRequestException(
-          'Guests cannot use saved phone numbers. Please provide a phone number in manualAddress.',
+          'Guests cannot use saved phone numbers. Please provide a phone number.',
         );
       }
     }
@@ -111,21 +111,18 @@ export class OrderService {
       );
     }
 
-    if (
-      !createOrderDto.phoneNumberId &&
-      !createOrderDto.manualAddress?.phoneNumber
-    ) {
+    const manualPhoneNumber =
+      createOrderDto.phoneNumber ?? createOrderDto.manualAddress?.phoneNumber;
+
+    if (!createOrderDto.phoneNumberId && !manualPhoneNumber) {
       throw new BadRequestException(
-        'A phone number is required. Provide phoneNumberId or include phoneNumber in manualAddress.',
+        'A phone number is required. Provide phoneNumberId or phoneNumber.',
       );
     }
 
-    if (
-      createOrderDto.phoneNumberId &&
-      createOrderDto.manualAddress?.phoneNumber
-    ) {
+    if (createOrderDto.phoneNumberId && manualPhoneNumber) {
       throw new BadRequestException(
-        'Provide either phoneNumberId or phoneNumber in manualAddress, not both.',
+        'Provide either phoneNumberId or a manual phoneNumber, not both.',
       );
     }
 
@@ -136,10 +133,9 @@ export class OrderService {
 
     try {
       let street: string;
+      let streetNumber: string;
       let city: string;
-      let state: string;
       let zipCode: string;
-      let country: string;
       let phoneNumber: string;
 
       if (createOrderDto.addressId) {
@@ -150,16 +146,14 @@ export class OrderService {
           throw new NotFoundException('Adresse non trouvée.');
         }
         street = address.street;
+        streetNumber = address.streetNumber;
         city = address.city;
-        state = address.state;
         zipCode = address.zipCode;
-        country = address.country;
       } else {
         street = createOrderDto.manualAddress.street;
+        streetNumber = createOrderDto.manualAddress.streetNumber;
         city = createOrderDto.manualAddress.city;
-        state = createOrderDto.manualAddress.state;
         zipCode = createOrderDto.manualAddress.zipCode;
-        country = createOrderDto.manualAddress.country;
       }
 
       if (createOrderDto.phoneNumberId) {
@@ -177,7 +171,7 @@ export class OrderService {
         }
         phoneNumber = savedPhoneNumber.phoneNumber;
       } else {
-        phoneNumber = createOrderDto.manualAddress.phoneNumber;
+        phoneNumber = manualPhoneNumber!;
       }
 
       let total = 0;
@@ -227,10 +221,9 @@ export class OrderService {
 
       const shippingAddress = queryRunner.manager.create(OrderShippingAddress, {
         street,
+        streetNumber,
         city,
-        state,
         zipCode,
-        country,
         phoneNumber,
       });
 
