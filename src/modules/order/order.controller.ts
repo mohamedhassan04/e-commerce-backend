@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -30,6 +31,8 @@ import { Users } from '../users/entities/user.entity';
 import { ProductQueryDto } from 'src/shared/dto/pagination-query.dto';
 import { OrderQueryDto } from './dto/order-query.dto';
 import { Request } from 'express';
+import { Throttle } from '@nestjs/throttler';
+import { GuestOrderTrackingDto } from './dto/guest-order-tracking.dto';
 
 @ApiTags('Order')
 @Controller('order')
@@ -45,6 +48,16 @@ export class OrderController {
   createOrder(@Body() createOrderDto: CreateOrderDto, @Req() req: Request) {
     const userId = (req as any)?.user?.id?.id || null;
     return this.orderService.createOrder(createOrderDto, userId);
+  }
+
+  @ApiOperation({ summary: 'Get limited guest order status from a private email token' })
+  @ApiNotFoundResponse({ description: 'Tracking link is invalid or expired.' })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Header('Cache-Control', 'no-store, private')
+  @Header('Referrer-Policy', 'no-referrer')
+  @Post('guest-tracking')
+  getGuestOrderTracking(@Body() dto: GuestOrderTrackingDto) {
+    return this.orderService.getGuestOrderTracking(dto.token);
   }
 
   @ApiOperation({ summary: 'Check stock before changing cart quantity' })

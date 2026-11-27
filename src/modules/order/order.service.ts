@@ -6,8 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { createHash, randomBytes } from 'crypto';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { OrderShippingAddress } from './entities/order-shipping-address.entity';
@@ -38,7 +40,41 @@ export class OrderService {
     private readonly _orderRepo: Repository<Order>,
     private readonly eventEmitter: EventEmitter2,
     private readonly _translationService: ContentTranslationService,
+    private readonly configService: ConfigService,
   ) {}
+
+  private createGuestTrackingUrl(token: string): string {
+    const configuredFrontendUrl =
+      this.configService.get<string>('FRONTEND_PATH');
+    if (!configuredFrontendUrl) {
+      throw new Error('FRONTEND_PATH must be configured for guest order tracking.');
+    }
+    const frontendBase = new URL(configuredFrontendUrl);
+    const isDevelopment =
+      this.configService.get<string>('MODE') === 'DEV' &&
+      this.configService.get<string>('NODE_ENV') !== 'production';
+    const isLocalHost =
+      frontendBase.hostname === 'localhost' ||
+      frontendBase.hostname === '127.0.0.1' ||
+      frontendBase.hostname === '::1';
+    if (frontendBase.protocol !== 'https:' && !(isDevelopment && isLocalHost)) {
+      throw new Error('Guest tracking requires an HTTPS frontend URL outside development.');
+    }
+    if (!isDevelopment && isLocalHost) {
+      throw new Error('FRONTEND_PATH must use the public domain outside development.');
+    }
+
+    const trackingUrl = new URL('/guest-order', frontendBase);
+    trackingUrl.hash = token;
+    return trackingUrl.toString();
+  }
+
+  private revokeGuestTracking(order: Order, status: OrderStatus): void {
+    if (order.guestTrackingTokenHash && status === OrderStatus.SHIPPED) {
+      order.guestTrackingTokenHash = null;
+      order.guestTrackingRevokedAt = new Date();
+    }
+  }
 
   private async attachOrderProductTranslations(
     orders: Order[],
@@ -125,6 +161,13 @@ export class OrderService {
         'Provide either phoneNumberId or a manual phoneNumber, not both.',
       );
     }
+
+    const guestTrackingToken = isGuest
+      ? randomBytes(32).toString('base64url')
+      : null;
+    const guestTrackingExpiresAt = guestTrackingToken
+      ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+      : null;
 
     const queryRunner = this._dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -235,6 +278,11 @@ export class OrderService {
         guestEmail: isGuest ? createOrderDto.guestEmail : null,
         guestFirstName: isGuest ? createOrderDto.guestFirstName : null,
         guestLastName: isGuest ? createOrderDto.guestLastName : null,
+        guestTrackingTokenHash: guestTrackingToken
+          ? createHash('sha256').update(guestTrackingToken).digest('hex')
+          : null,
+        guestTrackingExpiresAt,
+        guestTrackingRevokedAt: null,
         items: orderItems,
         shippingAddress,
       });
@@ -296,6 +344,9 @@ export class OrderService {
           items: emailItems,
           totalTTC: total,
           savings: Math.round(savings * 100) / 100,
+          ...(guestTrackingToken
+            ? { guestTrackingUrl: this.createGuestTrackingUrl(guestTrackingToken) }
+            : {}),
         });
       }
       await queryRunner.commitTransaction();
@@ -338,6 +389,46 @@ export class OrderService {
     return {
       valid: dto.quantity <= variant.stock,
       availableStock: variant.stock,
+    };
+  }
+
+  // @desc Get the minimal status for a guest order using its private bearer token
+  async getGuestOrderTracking(token: string) {
+    if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
+      throw new NotFoundException('Tracking link is invalid or expired.');
+    }
+
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const now = new Date();
+    const order = await this._orderRepo
+      .createQueryBuilder('order')
+      .select([
+        'order.orderNumber',
+        'order.status',
+        'order.createdAt',
+        'order.updatedAt',
+      ])
+      .where('order.guestTrackingTokenHash = :tokenHash', { tokenHash })
+      .andWhere('order.guestTrackingExpiresAt > :now', { now })
+      .andWhere('order.user_id IS NULL')
+      .andWhere('order.guestTrackingRevokedAt IS NULL')
+      .andWhere('order.status NOT IN (:...closedStatuses)', {
+        closedStatuses: [OrderStatus.SHIPPED],
+      })
+      .getOne();
+
+    if (!order) {
+      throw new NotFoundException('Tracking link is invalid or expired.');
+    }
+
+    return {
+      message: 'Guest order status retrieved successfully.',
+      data: {
+        orderNumber: order.orderNumber,
+        status: order.status,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      },
     };
   }
 
@@ -465,6 +556,7 @@ export class OrderService {
     }
 
     order.status = dto.status;
+    this.revokeGuestTracking(order, dto.status);
     if (dto.status === OrderStatus.DELIVERED) {
       order.deliveredAt = new Date();
     }
@@ -493,6 +585,7 @@ export class OrderService {
 
     for (const order of orders) {
       order.status = dto.status;
+      this.revokeGuestTracking(order, dto.status);
       if (dto.status === OrderStatus.DELIVERED) {
         order.deliveredAt = new Date();
       }

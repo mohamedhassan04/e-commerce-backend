@@ -15,6 +15,10 @@ import { OrderShippingAddress } from './order-shipping-address.entity';
 
 @Entity('tb_orders')
 @Index(['orderNumber'], { unique: true })
+@Index('UQ_tb_orders_guest_tracking_token_hash', ['guestTrackingTokenHash'], {
+  unique: true,
+  where: 'guest_tracking_token_hash IS NOT NULL',
+})
 export class Order extends Node {
   @Column({ name: 'order_number', type: 'varchar', length: 30, unique: true })
   orderNumber: string;
@@ -54,6 +58,15 @@ export class Order extends Node {
     nullable: true,
   })
   guestLastName: string | null;
+
+  @Column({ name: 'guest_tracking_token_hash', type: 'varchar', length: 64, nullable: true })
+  guestTrackingTokenHash: string | null;
+
+  @Column({ name: 'guest_tracking_expires_at', type: 'timestamptz', nullable: true })
+  guestTrackingExpiresAt: Date | null;
+
+  @Column({ name: 'guest_tracking_revoked_at', type: 'timestamptz', nullable: true })
+  guestTrackingRevokedAt: Date | null;
 
   @OneToOne(
     () => OrderShippingAddress,

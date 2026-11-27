@@ -13,6 +13,7 @@ export interface OrderEmailData {
   }[];
   totalTTC: number;
   savings?: number;
+  guestTrackingUrl?: string;
 }
 
 export function getOrderEmailTemplate(data: OrderEmailData) {
@@ -30,6 +31,10 @@ export function getOrderEmailTemplate(data: OrderEmailData) {
         total: 'Celkem',
         discount: 'Uplatněná sleva',
         questions: 'Potřebujete poradit? Odpovězte na tento e-mail.',
+        trackingTitle: 'Sledovat objednávku',
+        trackingDescription: 'Průběh své objednávky můžete bezpečně sledovat na tomto soukromém odkazu.',
+        trackingButton: 'Sledovat objednávku',
+        trackingExpiry: 'Odkaz platí 3 dny a přestane fungovat ve chvíli, kdy objednávku odešleme.',
       }
     : {
         eyebrow: `ORDER ${data.ref}`,
@@ -42,6 +47,10 @@ export function getOrderEmailTemplate(data: OrderEmailData) {
         total: 'Total',
         discount: 'Discount applied',
         questions: 'Need a hand? Just reply to this email.',
+        trackingTitle: 'Track your order',
+        trackingDescription: 'Use this private link to check the progress of your guest order.',
+        trackingButton: 'View order progress',
+        trackingExpiry: 'This link is valid for 3 days and expires as soon as your order ships.',
       };
 
   const itemRows = (data.items || [])
@@ -70,6 +79,18 @@ export function getOrderEmailTemplate(data: OrderEmailData) {
       </tr>`
     : '';
 
+  const trackingUrl = data.guestTrackingUrl?.replace(/&/g, '&amp;');
+  const trackingSection = trackingUrl
+    ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0 0;border:1px solid #dce4dc;border-radius:12px;background:#e2ece5;">
+        <tr><td style="padding:20px 22px;">
+          <p style="margin:0 0 7px;color:#1d3124;font-size:15px;font-weight:700;">${copy.trackingTitle}</p>
+          <p style="margin:0;color:#66766c;font-size:13px;line-height:1.6;">${copy.trackingDescription}</p>
+          <a href="${trackingUrl}" style="display:inline-block;margin-top:16px;padding:12px 19px;border-radius:999px;background:#1d3124;color:#faf9f1;font-size:14px;font-weight:700;text-decoration:none;">${copy.trackingButton}</a>
+          <p style="margin:13px 0 0;color:#66766c;font-size:11px;line-height:1.5;">${copy.trackingExpiry}</p>
+        </td></tr>
+      </table>`
+    : '';
+
   const content = `
     <p style="margin:0 0 10px;color:#1d3124;font-size:16px;line-height:1.6;">${copy.greeting} <strong>${data.clientName || copy.customer}</strong>,</p>
     <p style="margin:0 0 24px;color:#66766c;font-size:15px;line-height:1.7;">${copy.intro}</p>
@@ -90,6 +111,7 @@ export function getOrderEmailTemplate(data: OrderEmailData) {
         <td style="padding:17px 12px;border-top:2px solid #1d3124;color:#14231a;font-size:20px;font-weight:700;text-align:right;white-space:nowrap;">${formatPrice(data.totalTTC)}</td>
       </tr>
     </table>
+    ${trackingSection}
     <p style="margin:24px 0 0;padding-top:18px;border-top:1px solid #e5e7dc;color:#66766c;font-size:13px;line-height:1.6;">${copy.questions}</p>`;
 
   return renderEmailLayout({
