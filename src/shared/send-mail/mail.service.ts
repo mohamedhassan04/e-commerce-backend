@@ -21,7 +21,11 @@ import {
 export class EmailService {
   constructor(private readonly mailerService: MailerService) {}
 
-  async sendEmailForgotPassword(email: string, resetCode: string, language: 'cz' | 'en' = 'en') {
+  async sendEmailForgotPassword(
+    email: string,
+    resetCode: string,
+    language: 'cz' | 'en' = 'en',
+  ) {
     try {
       await this.mailerService.sendMail({
         to: email,
@@ -36,7 +40,11 @@ export class EmailService {
     }
   }
 
-  async sendEmailCreateUserAccount(email: string, activeCode: string, language: 'cz' | 'en' = 'en') {
+  async sendEmailCreateUserAccount(
+    email: string,
+    activeCode: string,
+    language: 'cz' | 'en' = 'en',
+  ) {
     try {
       await this.mailerService.sendMail({
         to: email,
@@ -44,17 +52,26 @@ export class EmailService {
         html: getEmailVerificationTemplate(activeCode, language),
       });
     } catch (error) {
+      console.log(error);
       throw new InternalServerErrorException(
         "Un probleme est survenu lors de l'envoi de l'email",
       );
     }
   }
 
-  async sendWelcomeEmails(name: string, email: string, tempPassword: string, language: 'cz' | 'en' = 'en') {
+  async sendWelcomeEmails(
+    name: string,
+    email: string,
+    tempPassword: string,
+    language: 'cz' | 'en' = 'en',
+  ) {
     try {
       await this.mailerService.sendMail({
         to: email,
-        subject: language === 'cz' ? 'Vítejte na naší platformě' : 'Welcome to our platform',
+        subject:
+          language === 'cz'
+            ? 'Vítejte na naší platformě'
+            : 'Welcome to our platform',
         html: getEmailWelcomeTemplate(name, email, tempPassword, language),
       });
     } catch (error) {
@@ -83,10 +100,7 @@ export class EmailService {
     });
   }
 
-  async sendWithdrawCustomerEmail(
-    to: string,
-    data: WithdrawCustomerEmailData,
-  ) {
+  async sendWithdrawCustomerEmail(to: string, data: WithdrawCustomerEmailData) {
     await this.mailerService.sendMail({
       to,
       subject: `${data.language === 'cz' ? 'Potvrzení odstoupení od smlouvy' : 'Withdrawal request confirmation'} - ${data.orderNumber}`,

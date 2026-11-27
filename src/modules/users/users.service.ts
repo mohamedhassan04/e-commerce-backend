@@ -88,7 +88,7 @@ export class UsersService {
         HttpStatus: HttpStatus.CREATED,
       };
     } catch (error) {
-      throw error;
+      console.log(error);
     }
   }
 
@@ -326,11 +326,16 @@ export class UsersService {
       user.resetPasswordCodeExpiry = expiry;
       await this._userRepo.save(user);
 
-      await this.emailService.sendEmailForgotPassword(email, resetCode, language);
+      await this.emailService.sendEmailForgotPassword(
+        email,
+        resetCode,
+        language,
+      );
     }
 
     return {
-      message: 'Si un compte est associé à cette adresse email, un code de réinitialisation a été envoyé.',
+      message:
+        'Si un compte est associé à cette adresse email, un code de réinitialisation a été envoyé.',
       HttpStatus: HttpStatus.OK,
     };
   }

@@ -142,6 +142,8 @@ export class WithdrawService {
       .createQueryBuilder('withdraw')
       .select([
         'withdraw.id',
+        'withdraw.name',
+        'withdraw.email',
         'withdraw.orderNumber',
         'withdraw.status',
         'withdraw.createdAt',
