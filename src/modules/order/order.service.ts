@@ -70,7 +70,8 @@ export class OrderService {
   }
 
   private revokeGuestTracking(order: Order, status: OrderStatus): void {
-    if (order.guestTrackingTokenHash && status === OrderStatus.SHIPPED) {
+    if (order.guestTrackingTokenHash && status === OrderStatus.DELIVERED) {
+      order.guestTrackingTokenHash = null;
       order.guestTrackingRevokedAt = new Date();
     }
   }
@@ -406,11 +407,14 @@ export class OrderService {
         'order.status',
         'order.createdAt',
         'order.updatedAt',
-        'order.guestTrackingRevokedAt',
       ])
       .where('order.guestTrackingTokenHash = :tokenHash', { tokenHash })
       .andWhere('order.guestTrackingExpiresAt > :now', { now })
       .andWhere('order.user_id IS NULL')
+      .andWhere('order.guestTrackingRevokedAt IS NULL')
+      .andWhere('order.status NOT IN (:...closedStatuses)', {
+        closedStatuses: [OrderStatus.DELIVERED],
+      })
       .getOne();
 
     if (!order) {
@@ -421,8 +425,7 @@ export class OrderService {
       message: 'Guest order status retrieved successfully.',
       data: {
         orderNumber: order.orderNumber,
-        status: order.guestTrackingRevokedAt ? OrderStatus.SHIPPED : order.status,
-        trackingExpired: Boolean(order.guestTrackingRevokedAt),
+        status: order.status,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
       },
